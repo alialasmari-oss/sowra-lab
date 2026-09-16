@@ -42,7 +42,18 @@ export function openGeoPick(){
   const box=$('geoPickBox');if(!box)return;
   box.classList.add('show');
 
-  setTimeout(function(){
+  /* ننتظر حتى تصير للحاوية أبعاد حقيقية */
+  const waitReady = (tries=0) => {
+    const el = document.getElementById('gpMap');
+    if(!el) return;
+    const h = el.clientHeight, wd = el.clientWidth;
+    if((h < 40 || wd < 40) && tries < 30){
+      return setTimeout(() => waitReady(tries+1), 60);
+    }
+    buildMap();
+  };
+
+  function buildMap(){
     try{
       if(!state.gpMap){
         // نقطة البداية: المنطقة المختارة أو وسط المملكة
@@ -78,13 +89,16 @@ export function openGeoPick(){
       /* محاولات متتابعة — الحاوية قد لا تكتمل أبعادها فوراً */
       const fix = () => { try{ state.gpMap.invalidateSize(true); }catch(e){} };
       fix();
-      [80, 200, 400, 700, 1100].forEach(ms => setTimeout(fix, ms));
+      [60, 180, 400, 800].forEach(ms => setTimeout(fix, ms));
       gpUpdateInfo();
     }catch(e){
+      console.error('[openGeoPick]', e);
       const gi=$('gpInfo');
-      if(gi)gi.textContent='تعذر تحميل الخريطة';
+      if(gi)gi.textContent='تعذر تحميل الخريطة: '+((e&&e.message)||'');
     }
-  },180);
+  }
+
+  setTimeout(() => waitReady(), 60);
 
   /* عند تغيّر حجم النافذة أو دوران الجوال */
   if(!window.__gpResizeBound){
@@ -128,7 +142,15 @@ export async function gpSearchPlace(){
 }
 export function confirmGeoPick(){
   try{
+    if(!state.gpMap){
+      toast('الخريطة ما جهزت بعد — انتظر لحظة',true);
+      return;
+    }
     const c=state.gpMap.getCenter();
+    if(!c || !isFinite(c.lat) || !isFinite(c.lng)){
+      toast('تعذر قراءة الموقع من الخريطة',true);
+      return;
+    }
     // وضع تعديل صورة منشورة
     if(state.geoPickMode==='edit'){
       state.edGeo={lat:c.lat,lng:c.lng};
@@ -153,8 +175,11 @@ export function confirmGeoPick(){
     if(mb)mb.style.display='none';
     closeGeoPick();
     toast('انحفظ الموقع 📍');
-    if(typeof fillPlaceFromGeo==='function')fillPlaceFromGeo(c.lat,c.lng);
-  }catch(e){toast('تعذر الحفظ',true)}
+    try{ fillPlaceFromGeo(c.lat,c.lng); }catch(e){ console.warn('fillPlaceFromGeo', e); }
+  }catch(e){
+    console.error('[confirmGeoPick]', e);
+    toast('تعذر الحفظ: '+((e&&e.message)||''),true);
+  }
 }
 
 /* ====== اقتراح مبكر عند اختيار الصورة ====== */

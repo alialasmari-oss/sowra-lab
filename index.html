@@ -773,8 +773,10 @@
       <input id="gpSearch" placeholder="ابحث عن المكان — مثال: وادي لجب" onkeydown="if(event.key==='Enter')gpSearchPlace()">
       <button onclick="gpSearchPlace()">🔍</button>
     </div>
-    <div id="gpMap" class="gp-map"></div>
-    <div class="gp-pin">📍</div>
+    <div class="gp-map">
+      <div id="gpMap"></div>
+      <div class="gp-pin">📍</div>
+    </div>
     <div class="gp-info" id="gpInfo">حرّك الخريطة حتى يقع الدبوس على مكان التصوير</div>
     <div class="gp-acts">
       <button class="btn" style="background:var(--palm)" onclick="confirmGeoPick()">✓ هذا هو المكان</button>

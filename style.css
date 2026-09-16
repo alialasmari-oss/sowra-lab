@@ -898,21 +898,45 @@ body.dark .near-alert{background:linear-gradient(135deg,#1B2A21,var(--card))}
 .cap-raw:active{transform:scale(.985);border-color:var(--qblue)}
 
 /* ====== اختيار موقع الصورة ====== */
-.geopick-box{display:none;position:fixed;inset:0;background:rgba(36,31,28,.66);z-index:9990;align-items:center;justify-content:center;padding:16px}
+/* ====== خريطة اختيار الموقع ======
+   التخطيط: الخريطة تأخذ ما تبقّى · الأزرار مثبّتة بالأسفل دائماً */
+.geopick-box{display:none;position:fixed;inset:0;background:rgba(36,31,28,.7);z-index:9990;align-items:center;justify-content:center;padding:10px}
 .geopick-box.show{display:flex}
-.gp-card{background:var(--card);border:2px solid var(--ink);border-radius:20px;width:100%;max-width:480px;overflow:hidden;display:flex;flex-direction:column;max-height:94vh}
-.gp-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);flex-shrink:0}
-.gp-head span{font-family:'Reem Kufi',sans-serif;font-size:17px;color:var(--sand)}
-.gp-head button{background:var(--card2);border:1px solid var(--line);border-radius:50%;width:30px;height:30px;color:var(--txt-dim);font-size:14px;cursor:pointer}
-.gp-search{display:flex;gap:7px;padding:12px 16px 10px;flex-shrink:0}
-.gp-search input{flex:1;background:var(--card2);border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;color:var(--txt);font-family:'Tajawal';font-size:13.5px;outline:none}
-.gp-search button{background:var(--sadu);border:none;border-radius:12px;width:46px;font-size:16px;cursor:pointer;color:#fff}
-.gp-map{width:100%;height:clamp(240px,45vh,420px);background:var(--card2);position:relative;flex:0 0 auto}
+.gp-card{
+  background:var(--card);border:2px solid var(--ink);border-radius:20px;
+  width:100%;max-width:480px;
+  height:min(640px, calc(100dvh - 20px));
+  max-height:calc(100dvh - 20px);
+  overflow:hidden;display:flex;flex-direction:column;
+}
+.gp-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.gp-head span{font-family:'Reem Kufi',sans-serif;font-size:16px;color:var(--sand)}
+.gp-head button{background:var(--card2);border:1px solid var(--line);border-radius:50%;width:30px;height:30px;color:var(--txt-dim);font-size:14px;cursor:pointer;flex:0 0 auto}
+.gp-search{display:flex;gap:7px;padding:10px 16px;flex:0 0 auto}
+.gp-search input{flex:1;min-width:0;background:var(--card2);border:1.5px solid var(--line);border-radius:12px;padding:10px 13px;color:var(--txt);font-family:'Tajawal';font-size:13.5px;outline:none}
+.gp-search button{background:var(--sadu);border:none;border-radius:12px;width:46px;flex:0 0 46px;font-size:16px;cursor:pointer;color:#fff}
+
+/* الخريطة تملأ المتبقّي — min-height:0 إلزامي بـflex */
+.gp-map{flex:1 1 auto;min-height:180px;width:100%;background:var(--card2);position:relative}
+.gp-map #gpMap{position:absolute;inset:0;width:100%;height:100%}
 .gp-map .leaflet-container{width:100%;height:100%}
-.gp-pin{position:absolute;top:50%;left:50%;transform:translate(-50%,-100%);font-size:36px;pointer-events:none;z-index:500;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45));margin-top:-14px}
-.gp-info{padding:11px 16px;font-size:12px;color:var(--txt-dim);text-align:center;line-height:1.8;border-top:1px solid var(--line);flex-shrink:0}
-.gp-acts{display:flex;gap:8px;padding:0 16px calc(16px + env(safe-area-inset-bottom));flex-shrink:0}
-.gp-acts .btn{flex:1;padding:13px;font-size:14px}
+
+.gp-pin{position:absolute;top:50%;left:50%;transform:translate(-50%,-100%);font-size:34px;pointer-events:none;z-index:500;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45));margin-top:-12px}
+.gp-info{padding:9px 16px;font-size:11.5px;color:var(--txt-dim);text-align:center;line-height:1.75;border-top:1px solid var(--line);flex:0 0 auto}
+
+/* الأزرار — مثبّتة بالأسفل ولا تختفي أبداً */
+.gp-acts{display:flex;gap:8px;padding:10px 16px calc(12px + env(safe-area-inset-bottom));flex:0 0 auto;background:var(--card);border-top:1px solid var(--line)}
+.gp-acts .btn{flex:1;padding:13px 8px;font-size:14px;white-space:nowrap}
+
+@media(max-height:560px){
+  .gp-card{height:calc(100dvh - 12px)}
+  .gp-head{padding:8px 14px}
+  .gp-head span{font-size:14px}
+  .gp-search{padding:7px 14px}
+  .gp-info{padding:6px 14px;font-size:10.5px}
+  .gp-acts{padding:8px 14px calc(10px + env(safe-area-inset-bottom))}
+  .gp-acts .btn{padding:10px 6px;font-size:13px}
+}
 .geo-manual{background:#FFF7E0;border:1.5px solid var(--star);border-radius:13px;padding:12px 14px;margin-top:9px}
 .gm-txt{font-size:12.5px;color:#A87500;font-weight:700;line-height:1.85;margin-bottom:9px}
 .gm-btn{width:100%;background:var(--star);border:none;border-radius:11px;padding:11px;font-family:'Tajawal';font-size:13.5px;font-weight:700;color:var(--ink);cursor:pointer}

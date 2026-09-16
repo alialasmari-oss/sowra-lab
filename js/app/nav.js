@@ -1,7 +1,7 @@
 /* صورة من بلدي — app/nav.js
    التنقل والإقلاع */
 
-import { currentUser, ensureAuth, isAnon, sb } from '../core/db.js';
+import { currentUser, ensureAuth, isAnon, sb , session} from '../core/db.js';
 import { need } from '../core/hub.js';
 import { state } from '../core/state.js';
 import { $, esc, toast } from '../core/ui.js';
@@ -233,7 +233,7 @@ export async function handleAuthReturn(){
 
     const s=await sb.auth.getSession();
     if(s&&s.data&&s.data.session){
-      currentUser()=s.data.session.user;
+      session.user = s.data.session.user;
       await checkAdmin();
       if(typeof renderAccIn==='function')await renderAccIn();
       toast('حياك الله 🌟');

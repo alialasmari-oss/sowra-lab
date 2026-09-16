@@ -59,6 +59,7 @@ const BAD_PATTERNS = [
   [/['"]state\.\w+/,                     'state داخل سلسلة نصية'],
   [/state\.state\./,                     'state مزدوج'],
   [/_\w+_\(\)\s*=(?!=)/,                 'إسناد لدالة get()'],
+  [/\b(?:currentUser|isAnon|banner|videoAllowed|reelsState|isOwner|isEditor|isCurator)\(\)\s*=(?!=)/, 'إسناد لدالة core'],
   [/\bfrom\('state\./,                   'اسم جدول خاطئ'],
   [/getElementById\('[^']*state\./,      'معرّف عنصر خاطئ'],
 ];

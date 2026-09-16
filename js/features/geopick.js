@@ -75,12 +75,26 @@ export function openGeoPick(){
 
         state.gpMap.on('moveend',gpUpdateInfo);
       }
-      state.gpMap.invalidateSize();
+      /* محاولات متتابعة — الحاوية قد لا تكتمل أبعادها فوراً */
+      const fix = () => { try{ state.gpMap.invalidateSize(true); }catch(e){} };
+      fix();
+      [80, 200, 400, 700, 1100].forEach(ms => setTimeout(fix, ms));
       gpUpdateInfo();
     }catch(e){
-      $('gpInfo').textContent='تعذر تحميل الخريطة';
+      const gi=$('gpInfo');
+      if(gi)gi.textContent='تعذر تحميل الخريطة';
     }
-  },220);
+  },180);
+
+  /* عند تغيّر حجم النافذة أو دوران الجوال */
+  if(!window.__gpResizeBound){
+    window.__gpResizeBound = true;
+    window.addEventListener('resize', () => {
+      if(state.gpMap && $('geoPickBox')?.classList.contains('show')){
+        setTimeout(() => { try{ state.gpMap.invalidateSize(true); }catch(e){} }, 120);
+      }
+    });
+  }
 }
 export function closeGeoPick(){
   const box=$('geoPickBox');

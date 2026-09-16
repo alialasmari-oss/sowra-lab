@@ -319,3 +319,10 @@ export async function renderShooters(){
 
 /* ====== فلتر اختيار المحررين ====== */
 state.onlyEc=false;
+
+/* بروفايلي — بديل openProfile(USER.id) القديم */
+export function openMyProfile(){
+  const u = currentUser();
+  if(!u || isAnon()){ toast('سجّل أول عشان يكون لك بروفايل 👤', true); return; }
+  openProfile(u.id);
+}

@@ -40,6 +40,7 @@ const fillPlaceFromGeo = need('fillPlaceFromGeo');
 
 export function openGeoPick(){
   const box=$('geoPickBox');if(!box)return;
+  bindGeoPickEvents();
   box.classList.add('show');
 
   /* ننتظر حتى تصير للحاوية أبعاد حقيقية */
@@ -183,3 +184,30 @@ export function confirmGeoPick(){
 }
 
 /* ====== اقتراح مبكر عند اختيار الصورة ====== */
+
+/* ═══ مستمعات مباشرة — لا تعتمد على الجسر ═══
+   تُربط مرة واحدة عند أول فتح، فتعمل حتى لو تعطّل onclick */
+export function bindGeoPickEvents(){
+  if(window.__gpBound) return;
+  window.__gpBound = true;
+
+  document.addEventListener('click', (e) => {
+    const box = document.getElementById('geoPickBox');
+    if(!box || !box.classList.contains('show')) return;
+
+    const btn = e.target.closest('button');
+    if(!btn || !box.contains(btn)) return;
+
+    const txt = (btn.textContent || '').trim();
+    if(txt.includes('هذا هو المكان')){
+      e.preventDefault(); e.stopPropagation();
+      confirmGeoPick();
+    }else if(txt === 'إلغاء' || txt === '✕'){
+      e.preventDefault(); e.stopPropagation();
+      closeGeoPick();
+    }else if(txt === '🔍'){
+      e.preventDefault(); e.stopPropagation();
+      gpSearchPlace();
+    }
+  }, true);   /* مرحلة الالتقاط — تسبق أي مستمع آخر */
+}

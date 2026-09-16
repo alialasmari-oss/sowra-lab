@@ -166,8 +166,18 @@ async function boot(){
     return;
   }
 
-  /* الأماكن أولاً — القوائم تعتمد عليها */
-  try{ await loadPlaces(); }catch(e){}
+  /* ═══ الأماكن أولاً — القوائم تُبنى منها ═══
+     نستدعي الوحدة مباشرة لا window (الجسر قد يتأخر) */
+  try{
+    await loadPlaces();
+    features_feed.initSelects();
+    features_feed.fillAddCities();
+    features_feed.fillCities();
+    console.info('[boot] القوائم جاهزة:',
+      (document.getElementById('aRegion')?.options.length || 0) - 1, 'منطقة');
+  }catch(e){
+    console.error('[boot] تعذر بناء القوائم', e);
+  }
 
   /* ثم الإقلاع المعتاد — nav.js يتولّاه */
   try{

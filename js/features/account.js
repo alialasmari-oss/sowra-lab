@@ -158,12 +158,12 @@ export async function accSubmit(){
       });
       if(error)throw error;
       if(!data.session){toast('أُرسل رابط تأكيد لإيميلك 📧');return}
-      currentUser()=data.session.user;
+      session.user = data.session.user;
     }else{
       const { data, error } = await sb.auth.signInWithPassword({email,password:pass});
       if(error)throw error;
       const { data:{ session } } = await sb.auth.getSession();
-      currentUser()=(session&&session.user)||(data&&data.user);
+      session.user = (session&&session.user)||(data&&data.user);
       if(!currentUser())throw new Error('تعذر قراءة الجلسة');
     }
 

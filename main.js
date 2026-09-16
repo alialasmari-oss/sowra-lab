@@ -167,7 +167,12 @@ async function boot(){
   }
 
   /* الأماكن أولاً — القوائم تعتمد عليها */
-  try{ await loadPlaces(); }catch(e){}
+  try{
+    await loadPlaces();
+    if(typeof window.initSelects==='function') window.initSelects();
+    if(typeof window.fillAddCities==='function') window.fillAddCities();
+    if(typeof window.fillCities==='function') window.fillCities();
+  }catch(e){ console.warn('[boot] الأماكن', e); }
 
   /* ثم الإقلاع المعتاد — nav.js يتولّاه */
   try{

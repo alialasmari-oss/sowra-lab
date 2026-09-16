@@ -56,16 +56,25 @@ for(const f of files) dfs(f, [f]);
 /* ═══ ٣) أنماط خاطئة ═══ */
 const BAD_PATTERNS = [
   [/^.*(?:let|const|var)\s+state\.\w+/m, 'تعريف state.x (مستحيل)'],
-  [/['"]state\.\w+/,                     'state داخل سلسلة نصية'],
+
   [/state\.state\./,                     'state مزدوج'],
   [/_\w+_\(\)\s*=(?!=)/,                 'إسناد لدالة get()'],
   [/\b(?:currentUser|isAnon|banner|videoAllowed|reelsState|isOwner|isEditor|isCurator)\(\)\s*=(?!=)/, 'إسناد لدالة core'],
+  [/(?<![.\w$'"])(?:GEO|VILL|USER|IS_ADMIN|ADM_ROLE|VISIT_COUNTS|CLAIM_MAP)\s*[\[.(]/, 'متغير عام قديم'],
   [/\bfrom\('state\./,                   'اسم جدول خاطئ'],
   [/getElementById\('[^']*state\./,      'معرّف عنصر خاطئ'],
 ];
 const badHits = [];
+/* ينظّف التعليقات والسلاسل — يمنع الإنذارات الكاذبة */
+const strip = src => src
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/\/\/.*/g, '')
+  .replace(/'(?:[^'\\]|\\.)*'/g, "''")
+  .replace(/"(?:[^"\\]|\\.)*"/g, '""')
+  .replace(/`(?:[^`\\]|\\.)*`/g, '``');
+
 for(const f of files){
-  const s = read(f);
+  const s = strip(read(f));
   for(const [re, desc] of BAD_PATTERNS){
     const g = new RegExp(re.source, re.flags.includes('m') ? 'gm' : 'g');
     for(const m of s.matchAll(g)) badHits.push([f, desc, m[0].slice(0,60).trim()]);
@@ -107,8 +116,14 @@ let htmlMissing = [];
 try{
   const html = fs.readFileSync('./index.html','utf8');
   const needed = new Set();
-  for(const m of html.matchAll(/on\w+\s*=\s*"([^"]*)"/g))
+  const IDENT_SAFE = new Set(['event','this','document','window','Math','JSON','parseInt',
+    'parseFloat','alert','confirm','true','false','null','undefined','Date','String','Number']);
+  for(const m of html.matchAll(/on\w+\s*=\s*"([^"]*)"/g)){
     for(const c of m[1].matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)) needed.add(c[1]);
+    /* متغيرات تُقرأ بلا نداء — مثل USER.id */
+    for(const c of m[1].matchAll(/(?<![.\w$'"])([A-Z][A-Za-z_$]{2,})\s*\./g))
+      if(!IDENT_SAFE.has(c[1])) needed.add(c[1]);
+  }
   const SKIP = ['event','this','getElementById','click','focus','blur','preventDefault','stopPropagation','if'];
   htmlMissing = [...needed].filter(n => !exports[n] && !SKIP.includes(n));
 }catch(e){}

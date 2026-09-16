@@ -116,10 +116,10 @@ export function go(p){
 
   try{if(typeof renderTagRow==='function')renderTagRow();}catch(e){}
   try{if(typeof renderFdTags==='function')renderFdTags();}catch(e){}
-  try{initSelects();fillAddCities();}catch(e){}
   const authP=ensureAuth().then(()=>{checkAdmin();loadFavs();}).catch(e=>{});
   try{
-    await Promise.all([loadPlaces(),loadPhotos()]);
+    /* القوائم بُنيت بـmain.js — نكتفي بالصور */
+    await loadPhotos();
     loadWeek();loadSponsor();loadChallenge();
     initHero();
     showNearby();
@@ -308,7 +308,8 @@ export async function boot(){
     .catch(() => {});
 
   try{
-    await Promise.all([ loadPlaces(), loadPhotos() ]);
+    /* الأماكن والقوائم بُنيت بـmain.js — نكتفي بالصور */
+    await loadPhotos();
     loadWeek(); loadSponsor(); loadChallenge();
     initHero();
     showNearby();

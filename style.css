@@ -925,8 +925,17 @@ body.dark .near-alert{background:linear-gradient(135deg,#1B2A21,var(--card))}
 .gp-info{padding:9px 16px;font-size:11.5px;color:var(--txt-dim);text-align:center;line-height:1.75;border-top:1px solid var(--line);flex:0 0 auto}
 
 /* الأزرار — مثبّتة بالأسفل ولا تختفي أبداً */
-.gp-acts{display:flex;gap:8px;padding:10px 16px calc(12px + env(safe-area-inset-bottom));flex:0 0 auto;background:var(--card);border-top:1px solid var(--line)}
-.gp-acts .btn{flex:1;padding:13px 8px;font-size:14px;white-space:nowrap}
+.gp-acts{display:flex;gap:8px;padding:10px 16px calc(12px + env(safe-area-inset-bottom));flex:0 0 auto;background:var(--card);border-top:1px solid var(--line);position:relative;z-index:1200}
+.gp-acts .btn{flex:1;padding:13px 8px;font-size:14px;white-space:nowrap;position:relative;z-index:1}
+
+/* ⚠️ طبقات Leaflet تصل z-index:1000 وتغطي أزرار البطاقة.
+   نحصر الخريطة بسياق تكديس خاص بها فلا تتسلّق فوق الواجهة. */
+.gp-map{isolation:isolate;z-index:0}
+.gp-map .leaflet-pane,
+.gp-map .leaflet-top,
+.gp-map .leaflet-bottom,
+.gp-map .leaflet-control-container{z-index:auto}
+.gp-head,.gp-search,.gp-info{position:relative;z-index:1200}
 
 @media(max-height:560px){
   .gp-card{height:calc(100dvh - 12px)}

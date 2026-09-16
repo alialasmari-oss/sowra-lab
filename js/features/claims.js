@@ -18,7 +18,7 @@ const render = need('render');
 export async function loadClaims(){
   try{
     const r=await sb.from('claims').select('id,photo_id,place_name').eq('active',true);
-    state.claimMap={};
+    claimSt.claimMap={};
     const list=r.data||[];
     if(!list.length)return;
     // جلب الأصوات لحساب حالة التحقق
@@ -32,10 +32,10 @@ export async function loadClaims(){
       const mine=votes.filter(v=>v.claim_id===c.id);
       const sup=mine.filter(v=>v.stance==='support').length;
       const dbt=mine.filter(v=>v.stance==='doubt').length;
-      let state='new';
-      if(sup>=3&&sup>dbt*2)state='verified';
-      else if(dbt>sup&&dbt>=2)state='doubted';
-      state.claimMap[c.photo_id]={name:c.place_name,sup,dbt,state};
+      let claimSt='new';
+      if(sup>=3&&sup>dbt*2)claimSt='verified';
+      else if(dbt>sup&&dbt>=2)claimSt='doubted';
+      claimSt.claimMap[c.photo_id]={name:c.place_name,sup,dbt,claimSt};
     });
   }catch(e){}
 }
@@ -73,14 +73,14 @@ export async function renderClaim(p){
     const days=Math.ceil((new Date(c.expires_at)-new Date())/86400000);
     const notes=votes.filter(x=>x.note&&x.note.trim());
 
-    let state='new';
-    if(sup>=3&&sup>dbt*2)state='verified';
-    else if(dbt>sup&&dbt>=2)state='doubted';
+    let claimSt='new';
+    if(sup>=3&&sup>dbt*2)claimSt='verified';
+    else if(dbt>sup&&dbt>=2)claimSt='doubted';
     const stCfg={
       verified:{cls:'ok',  ic:'🏅', t:'أول موثّق — تحقّق منه الجمهور'},
       doubted: {cls:'dbt', ic:'❓', t:'سبق موضع شك'},
       new:     {cls:'new', ic:'🏅', t:'ادّعاء سبق — بانتظار الجمهور'}
-    }[state];
+    }[claimSt];
 
     el.innerHTML=`<div class="claim-box ${stCfg.cls}">
       <div class="claim-state">${stCfg.ic} ${stCfg.t}</div>

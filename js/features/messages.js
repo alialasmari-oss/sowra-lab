@@ -22,7 +22,7 @@ const showJoinBox = need('showJoinBox');
 const isBlockedWith = need('isBlockedWith');
 const loadMyBlocks = need('loadMyBlocks');
 export function openDmBox(uid,name){
-  if(isAnon()){toast('❤️ سجّل مجاناً وتحفظ مفضلتك',true);showJoinBox();return}
+  if(isAnon()){toast('✉️ سجّل مجاناً وراسل المصورين',true);showJoinBox();return}
   state.dmTo={id:uid,name:name};
   const el=$('dmBox');if(!el)return;
   $('dmTitle').textContent='✉️ رسالة إلى '+name;

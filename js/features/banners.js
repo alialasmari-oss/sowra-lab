@@ -122,31 +122,31 @@ export async function loadWeatherTip(){
     const minsToSunset=sunset?Math.round((sunset-now)/60000):null;
     const minsToSunrise=sunrise?Math.round((sunrise-now)/60000):null;
 
-    let ic,state,adv;
+    let ic,wState,adv;
 
     // ═══ الليل ═══
     if(!isDay){
-      ic='🌙';state='ليل';
+      ic='🌙';wState='ليل';
       if(cloud<30) adv='سماء صافية — فرصة لتصوير النجوم ودرب التبانة ✨';
       else if(cloud<70) adv='غيوم متفرقة — جرّب تصوير أضواء المدينة';
       else adv='سماء غائمة — التصوير الليلي صعب الليلة';
-      if(code>=45&&code<=48){ic='🌫️';state='ضباب ليلي';adv='الضباب مع أضواء الشارع = لقطات غامضة جميلة';}
+      if(code>=45&&code<=48){ic='🌫️';wState='ضباب ليلي';adv='الضباب مع أضواء الشارع = لقطات غامضة جميلة';}
       if(minsToSunrise!==null&&minsToSunrise>0&&minsToSunrise<90){
-        ic='🌄';state='قبل الشروق';adv='الشروق بعد '+minsToSunrise+' دقيقة — استعد للساعة الذهبية';
+        ic='🌄';wState='قبل الشروق';adv='الشروق بعد '+minsToSunrise+' دقيقة — استعد للساعة الذهبية';
       }
     }
     // ═══ النهار ═══
     else {
-      ic='☀️';state='صافٍ';adv='إضاءة قوية — صوّر في الظل أو انتظر الساعة الذهبية';
-      if(code>=45&&code<=48){ic='🌫️';state='ضباب';adv='الضباب فرصة ذهبية للقطات دراماتيكية — اخرج الآن!';}
-      else if(code>=51&&code<=67){ic='🌧️';state='مطر';adv='بعد المطر: انعكاسات وألوان مشبعة';}
-      else if(code>=71&&code<=77){ic='🌨️';state='ثلج';adv='مشهد نادر — وثّقه قبل ما يذوب';}
-      else if(code>=95){ic='⛈️';state='عاصفة';adv='السلامة أولاً — صوّر من مكان آمن';}
-      else if(cloud>70){ic='☁️';state='غائم';adv='إضاءة ناعمة مثالية للتفاصيل والبورتريه';}
-      else if(cloud>30){ic='⛅';state='غيوم متفرقة';adv='سماء درامية — وقت ممتاز للمناظر الواسعة';}
+      ic='☀️';wState='صافٍ';adv='إضاءة قوية — صوّر في الظل أو انتظر الساعة الذهبية';
+      if(code>=45&&code<=48){ic='🌫️';wState='ضباب';adv='الضباب فرصة ذهبية للقطات دراماتيكية — اخرج الآن!';}
+      else if(code>=51&&code<=67){ic='🌧️';wState='مطر';adv='بعد المطر: انعكاسات وألوان مشبعة';}
+      else if(code>=71&&code<=77){ic='🌨️';wState='ثلج';adv='مشهد نادر — وثّقه قبل ما يذوب';}
+      else if(code>=95){ic='⛈️';wState='عاصفة';adv='السلامة أولاً — صوّر من مكان آمن';}
+      else if(cloud>70){ic='☁️';wState='غائم';adv='إضاءة ناعمة مثالية للتفاصيل والبورتريه';}
+      else if(cloud>30){ic='⛅';wState='غيوم متفرقة';adv='سماء درامية — وقت ممتاز للمناظر الواسعة';}
 
       if(minsToSunset!==null&&minsToSunset>0&&minsToSunset<90){
-        ic='🌅';state='قبل الغروب';adv='الساعة الذهبية — بعد '+minsToSunset+' دقيقة أجمل ضوء لليوم';
+        ic='🌅';wState='قبل الغروب';adv='الساعة الذهبية — بعد '+minsToSunset+' دقيقة أجمل ضوء لليوم';
       }
       if(temp>=42){adv='الحر شديد ('+temp+'°) — صوّر بالصباح الباكر أو قبل المغرب';}
     }
@@ -154,7 +154,7 @@ export async function loadWeatherTip(){
     el.style.display='flex';
     el.innerHTML=`<div class="wt-ic">${ic}</div>
       <div class="wt-txt">
-        <div class="wt-now">${state} · ${temp}°</div>
+        <div class="wt-now">${wState} · ${temp}°</div>
         <div class="wt-adv">${adv}</div>
       </div>`;
   }catch(e){}

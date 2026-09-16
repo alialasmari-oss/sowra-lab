@@ -115,10 +115,10 @@ export function admRoleBadge(){
 
 export function admSetTab(t){
   // فحص الصلاحية
-  const need={wk:'editor',qs:'editor',plc:'editor',mu:'editor'};
+  const tabPerm={wk:'editor',qs:'editor',plc:'editor',mu:'editor'};
   if(t==='ec'&&!isCurator()){toast('🔒 هذا القسم للمحررين',true);return}
   if(t==='st'&&!isOwner()){toast('🔒 الإحصائيات للمالك فقط',true);return}
-  if(need[t]&&!isEditor()){toast('🔒 هذا القسم يحتاج صلاحية أعلى',true);return}
+  if(tabPerm[t]&&!isEditor()){toast('🔒 هذا القسم يحتاج صلاحية أعلى',true);return}
 
   state.admTab=t;
   ['Rep','All','Plc','Fb','St','Wk','Qs','Mu','Ec'].forEach(x=>{const e=$('admTab'+x);if(e)e.classList.remove('on')});

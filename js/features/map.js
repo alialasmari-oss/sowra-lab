@@ -141,9 +141,9 @@ export function drawCoverageGaps(){
   const LAT_MIN=16.5, LAT_MAX=32.0, LNG_MIN=34.5, LNG_MAX=55.5;
   const STEP=0.75;
 
-  const geo=state.photos.filter(p=>p.lat&&p.lng&&!p.abroad);
+  const geoPts=state.photos.filter(p=>p.lat&&p.lng&&!p.abroad);
   const filled=new Set();
-  geo.forEach(p=>{
+  geoPts.forEach(p=>{
     const gy=Math.floor((p.lat-LAT_MIN)/STEP);
     const gx=Math.floor((p.lng-LNG_MIN)/STEP);
     for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)filled.add((gy+dy)+'_'+(gx+dx));

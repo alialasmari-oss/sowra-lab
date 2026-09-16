@@ -109,13 +109,13 @@ export function admReelsBlock(){
   </div>`;
 }
 
-export async function admSetReels(state){
+export async function admSetReels(reelsMode){
   if(!needOwner('أضواء الديرة'))return;
   const vals={
     off:  {video_enabled:false, reels_soon:false},
     soon: {video_enabled:false, reels_soon:true},
     open: {video_enabled:true,  reels_soon:false}
-  }[state];
+  }[reelsMode];
   if(!vals)return;
 
   const {error}=await sb.from('site_banner').update(vals).eq('id',1);
@@ -125,12 +125,12 @@ export async function admSetReels(state){
     if(window[k]){window[k].video_enabled=vals.video_enabled;window[k].reels_soon=vals.reels_soon}
   });
 
-  const msg={off:'انطفأت الأضواء',soon:'◐ وضع «قريباً» مفعّل',open:'🎬 الأضواء مفتوحة للجميع'}[state];
+  const msg={off:'انطفأت الأضواء',soon:'◐ وضع «قريباً» مفعّل',open:'🎬 الأضواء مفتوحة للجميع'}[reelsMode];
   toast(msg);
   try{if(typeof initVideoUpload==='function')initVideoUpload()}catch(e){}
   // لو كنا بصفحة الأضواء وانطفأت — نرجع للرئيسية
   try{
-    if(state==='off'){
+    if(reelsMode==='off'){
       const cur=document.querySelector('.page.on');
       if(cur&&cur.id==='page-reels')go('feed');
     }

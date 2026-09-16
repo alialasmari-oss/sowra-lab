@@ -42,7 +42,7 @@ export async function isBlockedWith(uid){
 }
 
 export async function blockUser(uid,name){
-  if(isAnon()){toast('❤️ سجّل مجاناً وتحفظ مفضلتك',true);showJoinBox();return}
+  if(isAnon()){toast('🚫 سجّل مجاناً وتحكّم بمن يراسلك',true);showJoinBox();return}
   if(!confirm('حظر '+(name||'هذا العضو')+'؟\n\n· ما يقدر يراسلك\n· ما تقدر تراسله\n· رسائله تختفي من صندوقك'))return;
   const {error}=await sb.from('dm_blocks').insert({blocker:currentUser()?.id,blocked:uid});
   if(error&&error.code!=='23505'){toast('تعذر الحظر: '+error.message,true);return}

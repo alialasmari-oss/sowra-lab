@@ -31,7 +31,7 @@ const render = need('render');
 const showJoinBox = need('showJoinBox');
 export async function uploadAvatar(inp){
   const f=inp.files[0];if(!f)return;
-  if(isAnon()){toast('❤️ سجّل مجاناً وتحفظ مفضلتك',true);showJoinBox();return}
+  if(isAnon()){toast('📷 سجّل مجاناً وحمّل صورتك الشخصية',true);showJoinBox();return}
   if(f.size>4*1024*1024){toast('الصورة كبيرة — الحد 4 ميجا',true);inp.value='';return}
   toast('⏳ نرفع صورتك...');
   try{
@@ -87,7 +87,7 @@ export async function renderAccAvatar(){
 window.__stPeriod=7; /* ثابت */
 state.statsSort='stars';
 export async function saveProfileAll(){
-  if(isAnon()){toast('❤️ سجّل مجاناً وتحفظ مفضلتك',true);showJoinBox();return}
+  if(isAnon()){toast('💾 سجّل مجاناً واحفظ بياناتك',true);showJoinBox();return}
   const name=($('accEditName')?$('accEditName').value:'').trim();
   const region=($('accRegion')?$('accRegion').value:'').trim();
   const bio=($('accBio')?$('accBio').value:'').trim();
@@ -117,7 +117,7 @@ export async function uploadCover(inp){
   if(!sessionStorage.getItem('cover_hint')){
     try{sessionStorage.setItem('cover_hint','1')}catch(e){}
   }
-  if(isAnon()){toast('❤️ سجّل مجاناً وتحفظ مفضلتك',true);showJoinBox();return}
+  if(isAnon()){toast('🖼️ سجّل مجاناً وخصّص غلافك',true);showJoinBox();return}
   if(f.size>6*1024*1024){toast('الصورة كبيرة — الحد 6 ميجا',true);inp.value='';return}
   toast('⏳ نرفع الغلاف...');
   try{

@@ -42,7 +42,7 @@ export async function loadEC(){
       (ad.data||[]).forEach(x=>{if(x.role==='owner'||x.role==='editor')s.add(x.id)});
       curators=s.size||1;
     }catch(e){}
-    const need=Math.max(2,Math.ceil(curators/2));
+    const quorum=Math.max(2,Math.ceil(curators/2));
 
     // الأصوات
     const votes={};
@@ -71,7 +71,7 @@ export async function loadEC(){
 
     const head=`<div class="ec-head">
       <div class="ec-h1">🏵️ ترشيحات اختيار المحررين</div>
-      <div class="ec-h2">${noms.length} مفتوحة · ${curators} محرّراً · تحتاج ${need} أصوات للاعتماد</div>
+      <div class="ec-h2">${noms.length} مفتوحة · ${curators} محرّراً · تحتاج ${quorum} أصوات للاعتماد</div>
     </div>`;
 
     if(!noms.length){
@@ -83,7 +83,7 @@ export async function loadEC(){
       const p=state.admPhotos.find(x=>x.id===n.photo_id)||state.photos.find(x=>x.id===n.photo_id);
       const v=votes[n.id]||{yes:0,no:0};
       const mine=myVotes[n.id];
-      const ready=v.yes>=need;
+      const ready=v.yes>=quorum;
       return `<div class="ec-card${ready?' ready':''}">
         <div class="ec-top">
           ${p?`<img src="${thumbUrl(p.image_path)}" onerror="this.onerror=null;this.src='${imgUrl(p.image_path)}'" onclick="openSheet(${p.id})" alt="">`:'<div class="ec-noimg">📷</div>'}

@@ -26,9 +26,9 @@ export function detectMyRegion(){
   // من موقع المستخدم: أقرب صورة له
   if(!window.__USER_LAT||!state.photos.length)return '';
   const d=p=>Math.hypot((p.lat-window.__USER_LAT)*111,(p.lng-window.__USER_LNG)*111*Math.cos(window.__USER_LAT*Math.PI/180));
-  const geo=state.photos.filter(p=>p.lat&&p.lng&&!p.abroad&&p.region);
-  if(!geo.length)return '';
-  const near=geo.slice().sort((a,b)=>d(a)-d(b))[0];
+  const geoPts=state.photos.filter(p=>p.lat&&p.lng&&!p.abroad&&p.region);
+  if(!geoPts.length)return '';
+  const near=geoPts.slice().sort((a,b)=>d(a)-d(b))[0];
   return (near&&d(near)<=120)?near.region:'';
 }
 
@@ -57,7 +57,7 @@ export async function openRace(){
     // فجوة المنطقة التالية لديرتك
     if(mine&&i>0){
       const gap=state.race[i-1].total-r.total;
-      const need=Math.ceil(gap/10);
+      const gapNeed=Math.ceil(gap/10);
       html+=`<div class="race-gap">🔥 تحتاج <b>${need}</b> ${need===1?'صورة':'صور'} لتتجاوز <b>${esc(state.race[i-1].region)}</b></div>`;
     }
   });

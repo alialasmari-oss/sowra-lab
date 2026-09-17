@@ -2,9 +2,16 @@
    مكتبة الموسيقى */
 
 import { sb } from '../core/db.js';
+import { need } from '../core/hub.js';
 import { state } from '../core/state.js';
 import { $, esc } from '../core/ui.js';
 import { geo, COORDS, REGION_CENTER, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
+
+/* ═══ عبر الحاجز ═══
+   muUrl ← admin/misc.js
+   كان يُستدعى مجرّداً معتمداً على نشره بـwindow، وهذا يعمل بالمصادفة
+   وحدها: لو تأخّر نشر misc.js سقط الرسم كله بـReferenceError. */
+const muUrl = need('muUrl');
 
 export async function loadAdmMusic(){
   const el=$('admMu');if(!el)return;
@@ -16,6 +23,7 @@ export async function loadAdmMusic(){
     <div style="font-weight:700;font-size:14px;margin-bottom:8px">🎵 إضافة مقطع</div>
     <div style="font-size:11.5px;color:var(--txt-dim);margin-bottom:10px">MP3 خالٍ من الحقوق · حتى 5 ميجا · يُفضّل 30-60 ثانية</div>
     <input id="muName" placeholder="اسم المقطع (مثال: عود هادئ)" style="width:100%;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 13px;color:var(--txt);font-family:'Tajawal';font-size:13px;outline:none;margin-bottom:8px">
+    <input type="file" id="muFile" accept="audio/*,.mp3,.m4a,.wav" style="display:none" onchange="muPicked()">
     <button class="btn" style="width:100%;background:var(--card2);border:1.5px dashed var(--line);color:var(--txt);margin-bottom:8px" onclick="document.getElementById('muFile').click()">📁 <span id="muFileName">اختر ملف صوتي</span></button>
     <button class="btn" style="width:100%" id="muUpBtn" onclick="muUpload()">📤 رفع المقطع</button>
   </div>

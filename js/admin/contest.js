@@ -26,7 +26,6 @@ export async function admSpBlock(){
   const r=await sb.from('site_banner').select('*').eq('id',1).maybeSingle();
   const b=r.data||{active:false,image_path:'',link_url:''};
   state.banner=b;
-  state.banner=b;
   return `
   <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:16px">
     <div style="font-weight:700;font-size:14px;margin-bottom:6px">📣 بنر الراعي (رأس الصفحة) ${b.active?'<span style="font-size:11px;color:var(--palm);font-weight:700">● ظاهر</span>':'<span style="font-size:11px;color:var(--txt-dim)">○ مخفي</span>'}</div>
@@ -41,6 +40,7 @@ export async function admSpBlock(){
     <textarea id="spDeal" placeholder="عرض الراعي (اختياري — مثال: خصم 15% على معدات التصوير)" rows="2" style="width:100%;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px 13px;color:var(--txt);font-family:'Tajawal';font-size:13px;outline:none;resize:none;margin-bottom:8px">${esc(b.sponsor_deal||'')}</textarea>
     <input id="spCode" placeholder="كود الخصم (اختياري — مثال: SOWRA15)" value="${esc(b.sponsor_code||'')}" style="width:100%;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 13px;color:var(--txt);font-family:'Tajawal';font-size:13px;outline:none;margin-bottom:8px;direction:ltr;text-align:left;letter-spacing:1px">
     <input id="spLink" placeholder="رابط الراعي عند الضغط (اختياري)" value="${esc(b.link_url)}" style="width:100%;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 13px;color:var(--txt);font-family:'Tajawal';font-size:13px;outline:none;margin-bottom:10px;direction:ltr;text-align:left">
+    <input type="file" id="spFile" accept="image/*" style="display:none" onchange="admSpUpload(this.files[0])">
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" style="flex:1" onclick="$('spFile').click()">📤 ${b.image_path?'تغيير الصورة':'رفع صورة البنر'}</button>
       <button class="btn" style="flex:1;background:var(--card2);border:1px solid var(--line);color:var(--txt)" onclick="admSpSaveLink()">💾 حفظ الرابط</button>

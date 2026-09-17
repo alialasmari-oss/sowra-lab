@@ -98,7 +98,7 @@ export async function loadEC(){
           <div class="ec-bar">
             <span class="ec-yes">✓ ${v.yes}</span>
             <span class="ec-no">✕ ${v.no}</span>
-            ${ready?'<span class="ec-ready">جاهزة للاعتماد</span>':`<span class="ec-need">تحتاج ${need-v.yes} أصوات</span>`}
+            ${ready?'<span class="ec-ready">جاهزة للاعتماد</span>':`<span class="ec-need">تحتاج ${quorum-v.yes} أصوات</span>`}
           </div>
           <div class="ec-btns">
             <button class="ec-v yes ${mine==='yes'?'on':''}" onclick="ecVote(${n.id},'yes')">✓ أوافق</button>

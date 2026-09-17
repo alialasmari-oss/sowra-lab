@@ -68,14 +68,14 @@ export function initSelects(){
 export function fillCities(){
   const r=$('fRegion').value,c=$('fCity');
   c.innerHTML='<option value="">كل المدن</option>';
-  if(r)GEO[r].forEach(x=>c.innerHTML+=`<option>${x}</option>`);
+  if(r&&geo.GEO[r])geo.GEO[r].forEach(x=>c.innerHTML+=`<option>${x}</option>`);
 }
 
 export function fillAddCities(){
   const r=$('aRegion').value,c=$('aCity');
   c.innerHTML='<option value="">اختر المدينة</option>';
-  if(r)GEO[r].forEach(x=>c.innerHTML+=`<option>${x}</option>`);
-  $('villList').innerHTML=(r&&VILL[r]?VILL[r]:[]).map(v=>`<option value="${v}">`).join('');
+  if(r&&geo.GEO[r])geo.GEO[r].forEach(x=>c.innerHTML+=`<option>${x}</option>`);
+  $('villList').innerHTML=(r&&geo.VILL[r]?geo.VILL[r]:[]).map(v=>`<option value="${v}">`).join('');
 }
 
 export function render(){

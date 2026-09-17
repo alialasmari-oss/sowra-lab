@@ -14,7 +14,7 @@ const needEditor = need('needEditor');
 export function plcFillCities(){
   const r=$('plcRegion').value,c=$('plcCity');
   c.innerHTML='<option value="">المدينة (اختياري)</option>';
-  if(r&&GEO[r])GEO[r].forEach(x=>c.innerHTML+=`<option>${x}</option>`);
+  if(r&&geo.GEO[r])geo.GEO[r].forEach(x=>c.innerHTML+=`<option>${x}</option>`);
 }
 
 export function renderPlaces(){

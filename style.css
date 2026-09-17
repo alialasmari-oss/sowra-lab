@@ -252,6 +252,14 @@ nav{position:fixed;bottom:0;left:0;right:0;width:100%;z-index:30;background:var(
    auto-fit يطوي الأعمدة الفارغة: صورة واحدة تملأ السطر، واثنتان
    عمودان، وأربع تصير ٢×٢ على الجوال وصفاً واحداً على الشاشة العريضة.
    لا خانات فارغة مهما كان العدد، والحد الأقصى أربع بالشيفرة. */
+/* صندوق يحتوي القسم كله فيتميّز عن بقية صور الخلاصة.
+   شريط سدو على الحافة الابتدائية (يمين بالعربية) يجعله يُقرأ كوحدة
+   واحدة لا كصور سائبة، والألوان متغيّرات الهوية فيتبع الوضع الليلي. */
+#nearbyWrap{background:var(--card);border:1.5px solid var(--line);
+  border-inline-start:4px solid var(--sadu);border-radius:16px;
+  padding:12px 12px 14px;margin-bottom:14px;
+  box-shadow:0 2px 8px rgba(36,31,28,.07)}
+#nearbyWrap .nearby-title{padding:2px 2px 10px;color:var(--sand)}
 #nearbyFeed{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
 /* على الشاشة العريضة نحدّ عرض البطاقة، وإلا مدّت صورةٌ واحدة نفسها
    على ١١٠٠ بكسل بارتفاع ١٥٠ فتصير شريطاً مشوّهاً لا بطاقة. */

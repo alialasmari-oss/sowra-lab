@@ -37,6 +37,7 @@ const openShooters = need('openShooters');
 const openUserSearch = need('openUserSearch');
 const openWaiting = need('openWaiting');
 const renderMap = need('renderMap');
+const setView = need('setView');
 /* state.map → state.map */
 /* state.race → state.race */
 /* state.viewMode → state.viewMode */
@@ -189,20 +190,26 @@ export function renderNearby(){
   if(!lat||!lng){wrap.style.display='none';return}
 
   const distKm=(p)=>Math.hypot(((p.lat||0)-lat)*111,(((p.lng||0)-lng)*111*Math.cos(lat*Math.PI/180)));
-  const near=(state.photos||[])
+  const all=(state.photos||[])
     .filter(p=>p.lat&&p.lng&&!p.abroad&&p.visibility!=='private'&&p.media_type!=='video'&&distKm(p)<=NEAR_KM)
-    .sort((a,b)=>distKm(a)-distKm(b))
-    .slice(0,4);   /* أربع على الأكثر — الشبكة تتسع وتضيق حسب العدد */
+    .sort((a,b)=>distKm(a)-distKm(b));
+  const near=all.slice(0,4);   /* أربع على الأكثر — الشبكة تتسع وتضيق حسب العدد */
 
   if(!near.length){wrap.style.display='none';return}
 
   wrap.style.display='block';
   /* العنوان يذكر المدى صراحةً ليفرّقه الزائر عن البنر الأخضر،
-     ومصدره NEAR_KM نفسه فلا يتخلّف عنه لو غيّرناه. */
+     ومصدره NEAR_KM نفسه فلا يتخلّف عنه لو غيّرناه.
+     ويذكر العدد الكامل حين يتجاوز الأربع، فلا تختفي البقية بصمت. */
   const ttl=wrap.querySelector('.nearby-title');
   if(ttl){
-    const ar=String(NEAR_KM).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
-    ttl.textContent='📍 الأقرب إليك · ضمن '+ar+' كم';
+    const ar=n=>String(n).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
+    ttl.innerHTML='📍 الأقرب إليك · ضمن '+ar(NEAR_KM)+' كم'
+      + (all.length>near.length
+          ? ' <span style="font-weight:400;color:var(--txt-dim)">('+ar(near.length)+' من '+ar(all.length)+')</span>'
+            + ' <button onclick="setView(\'map\')" style="background:none;border:none;color:var(--sadu);'
+            + 'font-family:\'Tajawal\';font-size:12.5px;font-weight:700;cursor:pointer;padding:0 4px">شوف الكل على الخريطة ←</button>'
+          : '');
   }
   box.innerHTML=near.map(p=>{
     const d=distKm(p);
@@ -279,31 +286,49 @@ export function closeNearPop(){
   if(el)el.classList.remove('show');
 }
 
-export function nearPop(p, km){
+export function nearPop(p, km, total){
   nearPopEnsure();
   const el=document.getElementById('nearPop');
+  const n  = total||1;
   const dt = km<1 ? (Math.round(km*1000)+' متر') : (km.toFixed(1)+' كم');
+
   el.querySelector('.np-img').src = thumbUrl(p.image_path);
   el.querySelector('.np-img').onerror = function(){ this.onerror=null; this.src=imgUrl(p.image_path); };
-  el.querySelector('.np-kick').textContent = '📍 أنت قرب مكان مصوَّر';
-  el.querySelector('.np-ttl').textContent  = p.title||'';
-  el.querySelector('.np-sub').innerHTML    = esc(p.village||p.city||'') + ' · على بعد <b>' + dt + '</b>'
+
+  /* رسالة واحدة تذكر العدد كله — لا مربع لكل صورة */
+  el.querySelector('.np-kick').textContent = n>1
+    ? ('📍 أنت قرب ' + n + ' ' + (n===2?'صورتين':n<11?'صور':'صورة'))
+    : '📍 أنت قرب مكان مصوَّر';
+  el.querySelector('.np-ttl').textContent = p.title||'';
+  el.querySelector('.np-sub').innerHTML   =
+      esc(p.village||p.city||'') + ' · أقربها على بعد <b>' + dt + '</b>'
     + (km<=0.5 ? '<br>تقدر توثّق زيارتك الآن 👣' : '<br>اقترب أكثر لتوثيق الزيارة');
 
   const bw=el.querySelector('.np-btns');
   bw.innerHTML='';
   const open=document.createElement('button');
-  open.className='np-btn main'; open.textContent='افتحها';
+  open.className='np-btn main'; open.textContent = n>1 ? 'افتح الأقرب' : 'افتحها';
   open.onclick=()=>{ closeNearPop(); try{ openSheet(p.id); }catch(e){} };
-  const later=document.createElement('button');
-  later.className='np-btn'; later.textContent='لاحقاً';
-  later.onclick=()=>closeNearPop();
-  bw.appendChild(open); bw.appendChild(later);
+  if(n>1){
+    const all=document.createElement('button');
+    all.className='np-btn'; all.textContent='شوفها على الخريطة';
+    all.onclick=()=>{ closeNearPop(); try{ setView('map'); }catch(e){} };
+    bw.appendChild(open); bw.appendChild(all);
+  }else{
+    const later=document.createElement('button');
+    later.className='np-btn'; later.textContent='لاحقاً';
+    later.onclick=()=>closeNearPop();
+    bw.appendChild(open); bw.appendChild(later);
+  }
 
   el.classList.add('show');
 }
 
-/* يفحص الموقع الحالي: هل دخلنا مدى صورة جديدة؟ */
+/* يفحص الموقع الحالي: هل دخلنا مكاناً مصوَّراً لم نُنبَّه عليه؟
+
+   ملاحظة مهمة: ننبّه على «الوصول» لا على «كل صورة». لو وقفت وسط
+   خمسين صورة، التنبيه مرة واحدة تذكر الخمسين — ثم نعلّمها كلها
+   مقروءة. بدون هذا يقفز المربع خمسين مرة، كل عشرين ثانية واحدة. */
 export function maybePopNear(){
   const el=document.getElementById('nearPop');
   if(el&&el.classList.contains('show'))return;          /* مربع مفتوح — لا نزاحمه */
@@ -317,17 +342,19 @@ export function maybePopNear(){
   const seen=poppedIds();
   const d=p=>Math.hypot(((p.lat||0)-lat)*111,(((p.lng||0)-lng)*111*Math.cos(lat*Math.PI/180)));
 
-  const hit=(state.photos||[])
+  const inRange=(state.photos||[])
     .filter(p=>p.lat&&p.lng&&!p.abroad&&p.media_type!=='video'
              &&p.visibility!=='private'
              &&!(me&&p.user_id===me.id)      /* لا ننبّهك على صورتك أنت */
-             &&!seen.has(p.id)
              &&d(p)<=POP_KM)
-    .sort((a,b)=>d(a)-d(b))[0];
+    .sort((a,b)=>d(a)-d(b));
 
-  if(!hit)return;
-  markPopped(hit.id);
-  nearPop(hit, d(hit));
+  const fresh=inRange.filter(p=>!seen.has(p.id));
+  if(!fresh.length)return;
+
+  /* نعلّم كل ما في المدى مقروءاً — لا الصورة التي عرضناها وحدها */
+  inRange.forEach(p=>markPopped(p.id));
+  nearPop(fresh[0], d(fresh[0]), fresh.length);
 }
 
 /* متابعة الموقع — تبدأ مع الإقلاع وعند تشغيل المفتاح، وتتوقف عند إطفائه.

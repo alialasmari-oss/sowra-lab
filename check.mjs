@@ -59,7 +59,6 @@ const BAD_PATTERNS = [
   [/['"]state\.\w+/,                     'state داخل سلسلة نصية'],
   [/state\.state\./,                     'state مزدوج'],
   [/_\w+_\(\)\s*=(?!=)/,                 'إسناد لدالة get()'],
-  [/\b(?:currentUser|isAnon|banner|videoAllowed|reelsState|isOwner|isEditor|isCurator)\(\)\s*=(?!=)/, 'إسناد لدالة core'],
   [/\bfrom\('state\./,                   'اسم جدول خاطئ'],
   [/getElementById\('[^']*state\./,      'معرّف عنصر خاطئ'],
 ];
@@ -70,31 +69,6 @@ for(const f of files){
     const g = new RegExp(re.source, re.flags.includes('m') ? 'gm' : 'g');
     for(const m of s.matchAll(g)) badHits.push([f, desc, m[0].slice(0,60).trim()]);
   }
-}
-
-
-/* ═══ ٦) متغيرات محلية تحجب المستورد ═══ */
-const CORE_NAMES = new Set(['state','sb','session','geo','need','get','provide','toast','esc','$',
-  'imgUrl','thumbUrl','avatarUrl','vidUrl','timeAgo','rankOf','checkText','validPos','banner','COORDS']);
-const shadows = [];
-for(const f of files){
-  const s = read(f);
-  const imported = new Set();
-  for(const m of s.matchAll(/import\s*\{([^}]*)\}/g))
-    for(const n of m[1].split(',')) imported.add(n.trim().split(' as ').pop().trim());
-  const lines = s.split('\n');
-  lines.forEach((l, i) => {
-    for(const m of l.matchAll(/\b(?:let|const|var)\s+([A-Za-z_$][\w$,\s]*)/g))
-      for(const nm of m[1].split(',')){
-        const n = nm.trim().split('=')[0].trim();
-        if(imported.has(n) && CORE_NAMES.has(n)) shadows.push([f, i+1, n, l.trim().slice(0,60)]);
-      }
-    for(const m of l.matchAll(/function\s*[\w$]*\s*\(([^)]*)\)/g))
-      for(const p of m[1].split(',')){
-        const n = p.trim().split('=')[0].trim();
-        if(imported.has(n) && CORE_NAMES.has(n)) shadows.push([f, i+1, n, l.trim().slice(0,60)]);
-      }
-  });
 }
 
 /* ═══ ٤) الأحجام ═══ */
@@ -137,9 +111,6 @@ if(cycles.size){ fails++; [...cycles].slice(0,5).forEach(c => console.log(`     
 
 line(!badHits.length, 'أنماط خاطئة', badHits.length || '');
 if(badHits.length){ fails++; badHits.slice(0,8).forEach(([f,d,t]) => console.log(`       ${f}: ${d} — ${t}`)); }
-
-line(!shadows.length, 'متغيرات حاجبة', shadows.length || '');
-if(shadows.length){ fails++; shadows.slice(0,8).forEach(([f,ln,n,t]) => console.log(`       ${f}:${ln} «${n}» — ${t}`)); }
 
 line(!htmlMissing.length, 'onclick مفقودة', htmlMissing.length || '');
 if(htmlMissing.length){

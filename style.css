@@ -248,6 +248,14 @@ nav{position:fixed;bottom:0;left:0;right:0;width:100%;z-index:30;background:var(
 #feed,#favFeed.grid,#profFeed{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding-bottom:120px}
 @media(min-width:600px){#feed,#favFeed.grid,#profFeed{grid-template-columns:repeat(3,1fr)}}
 @media(min-width:900px){#feed,#favFeed.grid,#profFeed{grid-template-columns:repeat(4,1fr)}}
+/* «الأقرب إليك» — شبكة تتسع وتضيق حسب عدد الصور.
+   auto-fit يطوي الأعمدة الفارغة: صورة واحدة تملأ السطر، واثنتان
+   عمودان، وأربع تصير ٢×٢ على الجوال وصفاً واحداً على الشاشة العريضة.
+   لا خانات فارغة مهما كان العدد، والحد الأقصى أربع بالشيفرة. */
+#nearbyFeed{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+/* على الشاشة العريضة نحدّ عرض البطاقة، وإلا مدّت صورةٌ واحدة نفسها
+   على ١١٠٠ بكسل بارتفاع ١٥٠ فتصير شريطاً مشوّهاً لا بطاقة. */
+@media(min-width:600px){#nearbyFeed{grid-template-columns:repeat(auto-fit,minmax(190px,270px));justify-content:start}}
 .view-toggle-pair{display:flex;gap:2px;background:var(--card2);border:1.5px solid var(--line);border-radius:10px;padding:3px}
 /* ====== الأيقونة بالهيدر ====== */
 .hdr-icon{width:52px;height:52px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid var(--line)}

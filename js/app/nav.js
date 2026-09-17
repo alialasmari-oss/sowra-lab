@@ -95,15 +95,23 @@ export function go(p){
    عبر openAdmin المنشور بالجسر (main.js). فـgo('adm') وحدها تعرض
    اللوحة بلا دوالها — تظهر الأزرار ولا يعمل أي منها. */
 async function enterAdmin(){
-  try{
-    if(typeof window.openAdmin === 'function'){
+  /* ⚠️ ترتيب التقييم: main.js يستورد nav.js، فيُقيَّم nav.js أولاً —
+     أي أن الجسر (window.openAdmin) قد لا يكون نُشر بعد حين نصل هنا.
+     ننتظر ظهوره بدل السقوط على go('adm') التي تفتح لوحة بلا دوال. */
+  for(let i = 0; i < 40 && typeof window.openAdmin !== 'function'; i++){
+    await new Promise(r => setTimeout(r, 100));      /* حتى ٤ ثوانٍ */
+  }
+
+  if(typeof window.openAdmin === 'function'){
+    try{
       await window.openAdmin();
       return;
-    }
-  }catch(e){ console.warn('[adm] تعذر تحميل اللوحة', e); }
-  /* احتياطي أخير */
-  go('adm');
-  if(typeof loadReports==='function')loadReports();
+    }catch(e){ console.error('[adm] تعذر فتح اللوحة', e); }
+  }
+
+  /* لا نفتح لوحة بأزرار ميتة — نخبر المستخدم بوضوح */
+  console.error('[adm] الجسر لم يجهز — لم تُفتح اللوحة');
+  if(typeof toast === 'function') toast('تعذر تحميل لوحة الإشراف — حدّث الصفحة', true);
 }
 
 /* ============ البداية ============ */

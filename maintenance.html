@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>صورة من بلدي — تحت التطوير</title>
+<meta name="theme-color" content="#F7F1E3">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@400;600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--night:#F7F1E3;--card:#FFFFFF;--card2:#F1E8D6;--sand:#8C2F23;--sand-dim:#8A7B6A;--sadu:#D63A2F;--star:#E8A020;--line:#D9CDB4;--ink:#241F1C;--txt:#241F1C;--txt-dim:#6B6259}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:'Tajawal',sans-serif;background:var(--night);color:var(--txt);
+  display:flex;align-items:center;justify-content:center;padding:24px;min-height:100vh}
+.wrap{width:100%;max-width:440px;text-align:center}
+.mark{font-size:64px;line-height:1;margin-bottom:18px;animation:sway 3.4s ease-in-out infinite}
+@keyframes sway{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+.logo{font-family:'Reem Kufi',sans-serif;font-size:30px;font-weight:700;color:var(--sand);margin-bottom:6px}
+.sub{font-size:13px;color:var(--txt-dim);margin-bottom:24px}
+.card{background:var(--card);border:1.5px solid var(--ink);border-radius:18px;
+  box-shadow:0 4px 14px rgba(36,31,28,.10);padding:24px 20px}
+.title{font-family:'Reem Kufi',sans-serif;font-size:21px;color:var(--sand);margin-bottom:10px}
+.msg{font-size:14.5px;line-height:2;color:var(--txt);margin-bottom:6px}
+.note{font-size:12.5px;color:var(--txt-dim);line-height:1.9;margin-top:14px}
+.btn{margin-top:18px;width:100%;padding:13px;border:none;border-radius:14px;background:var(--sadu);
+  color:#fff;font-family:'Tajawal';font-size:14.5px;font-weight:700;cursor:pointer;transition:.2s}
+.btn:active{transform:scale(.98)}
+.btn[disabled]{opacity:.55;cursor:default}
+.dots{display:inline-block;min-width:18px;text-align:right}
+.foot{margin-top:20px;font-size:12px;color:var(--sand-dim)}
+.social{margin-top:10px;font-size:13px}
+.social a{color:var(--sand);text-decoration:none;font-weight:700;margin:0 6px}
+@media (prefers-color-scheme: dark){
+  body{background:#1A1614;color:#EFE7DA}
+  .card{background:#241F1C;border-color:#3A322C;box-shadow:none}
+  .msg{color:#EFE7DA}
+  .note,.sub{color:#A79C8E}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="mark">🚧</div>
+  <div class="logo">صورة من بلدي</div>
+  <div class="sub">عدسات أهل الديار</div>
+
+  <div class="card">
+    <div class="title">نشتغل على تحديث بسيط</div>
+    <div class="msg" id="msg">نرجع لكم بعد شوي بإذن الله — وشكراً لصبركم 🤍</div>
+    <button class="btn" id="btn" onclick="checkNow()">🔄 تحقّق الآن</button>
+    <div class="note">الصفحة تتحدّث تلقائياً<span class="dots" id="dots"></span> وترجعك للتطبيق أول ما نخلّص.</div>
+  </div>
+
+  <div class="social">
+    <a href="https://x.com/" target="_blank" rel="noopener">تابعنا على إكس</a>·<a href="https://instagram.com/" target="_blank" rel="noopener">إنستقرام</a>
+  </div>
+  <div class="foot">sowra.app</div>
+</div>
+
+<script>
+var U = "https://gquzjaxpqeggknhipmzk.supabase.co";
+var K = "sb_publishable_BNp6Fg3VLXa1Pf4V6QjncQ_f496PquX";
+
+/* لو المشرف وصل هنا بالغلط — رجّعه للتطبيق مباشرة */
+try{
+  if(localStorage.getItem("sowra_admin") === "1"){ location.replace("./"); }
+}catch(e){}
+
+var btn = document.getElementById('btn');
+var busy = false;
+
+function check(manual){
+  if(busy) return;
+  busy = true;
+  if(manual){ btn.disabled = true; btn.textContent = 'نتحقّق…'; }
+
+  fetch(U + "/rest/v1/site_banner?id=eq.1&select=maintenance,maintenance_msg", {
+    headers: { apikey: K, Authorization: "Bearer " + K },
+    cache: "no-store"
+  })
+  .then(function(r){ return r.json() })
+  .then(function(d){
+    var row = d && d[0];
+    if(!row){ return }
+
+    /* انتهت الصيانة — ارجع للتطبيق */
+    if(row.maintenance !== true){
+      document.getElementById('msg').textContent = 'خلصنا 🎉 نرجّعك للتطبيق…';
+      setTimeout(function(){ location.replace("./?t=" + Date.now()) }, 900);
+      return;
+    }
+
+    /* رسالة المشرف إن كتبها */
+    var m = (row.maintenance_msg || '').trim();
+    if(m) document.getElementById('msg').textContent = m;
+  })
+  .catch(function(){})
+  .then(function(){
+    busy = false;
+    if(manual){ btn.disabled = false; btn.textContent = '🔄 تحقّق الآن' }
+  });
+}
+
+function checkNow(){ check(true) }
+
+check(false);
+setInterval(function(){ check(false) }, 25000);
+
+/* نقاط متحركة صغيرة */
+var n = 0;
+setInterval(function(){
+  n = (n + 1) % 4;
+  document.getElementById('dots').textContent = '.'.repeat(n);
+}, 600);
+</script>
+
+</body>
+</html>

@@ -161,6 +161,39 @@ export async function loadWeatherTip(){
 }
 /* ====== الزيارات الميدانية ====== */
 
+/* «📍 الأقرب إليك» — جهة واحدة تقرّر ظهوره
+   كان الرسم محشوراً داخل نداء تحديد الموقع، وكان setView يخفيه عند
+   فتح الخريطة ولا يعيده عند الرجوع للشبكة — فيختفي القسم من أول ضغطة
+   على زر الخريطة ولا يرجع إلا بتحديث الصفحة وإذن موقع جديد.
+   الآن الدالة تقرأ الموقع المحفوظ وتقرّر بنفسها: تظهر إن كان هناك ما
+   يُعرض، وتخفي إن لم يكن — ويناديها كلٌّ من تحديد الموقع وsetView. */
+export function renderNearby(){
+  const wrap=$('nearbyWrap'), box=$('nearbyFeed');
+  if(!wrap||!box)return;
+  const lat=window.__USER_LAT, lng=window.__USER_LNG;
+  if(!lat||!lng){wrap.style.display='none';return}
+
+  const distKm=(p)=>Math.hypot(((p.lat||0)-lat)*111,(((p.lng||0)-lng)*111*Math.cos(lat*Math.PI/180)));
+  const near=(state.photos||[])
+    .filter(p=>p.lat&&p.lng&&!p.abroad&&p.visibility!=='private'&&p.media_type!=='video'&&distKm(p)<=30)
+    .sort((a,b)=>distKm(a)-distKm(b))
+    .slice(0,6);
+
+  if(!near.length){wrap.style.display='none';return}
+
+  wrap.style.display='block';
+  box.innerHTML=near.map(p=>`
+      <div class="card" onclick="openSheet(${p.id})">
+        <div class="ph"><img src="${thumbUrl(p.image_path)}" onerror="this.onerror=null;this.src='${imgUrl(p.image_path)}'" loading="lazy" alt="${esc(p.title)}">
+          <div class="loc-chip">📍 ${esc(p.village||p.city)}</div>
+        </div>
+        <div class="card-body">
+          <div class="card-title">${esc(p.title)}</div>
+          <div class="card-meta"><span>⭐ ${Number(p.avg_stars).toFixed(1)}</span></div>
+        </div>
+      </div>`).join('');
+}
+
 export function showNearby(){
   if(!navigator.geolocation){return}
   navigator.geolocation.getCurrentPosition(pos=>{
@@ -173,22 +206,7 @@ export function showNearby(){
     if(typeof renderNewsBanner==='function')renderNewsBanner();
     if(typeof checkNearby==='function')setTimeout(checkNearby,600);
     if(typeof renderHomeHero==='function')renderHomeHero();
-    const distKm=(p)=>Math.hypot(((p.lat||0)-lat)*111,(((p.lng||0)-lng)*111*Math.cos(lat*Math.PI/180)));
-
-const near=state.photos.filter(p=>p.lat&&p.lng&&!p.abroad&&p.visibility!=='private'&&p.media_type!=='video'&&distKm(p)<=30).sort((a, b)=>distKm(a)-distKm(b)).slice(0, 6);
-
-    if(!near.length)return;
-    $('nearbyWrap').style.display='block';
-    $('nearbyFeed').innerHTML=near.map(p=>`
-      <div class="card" onclick="openSheet(${p.id})">
-        <div class="ph"><img src="${thumbUrl(p.image_path)}" onerror="this.onerror=null;this.src='${imgUrl(p.image_path)}'" loading="lazy" alt="${esc(p.title)}">
-          <div class="loc-chip">📍 ${esc(p.village||p.city)}</div>
-        </div>
-        <div class="card-body">
-          <div class="card-title">${esc(p.title)}</div>
-          <div class="card-meta"><span>⭐ ${Number(p.avg_stars).toFixed(1)}</span></div>
-        </div>
-      </div>`).join('');
+    renderNearby();
   },()=>{},{timeout:5000});
 }
 

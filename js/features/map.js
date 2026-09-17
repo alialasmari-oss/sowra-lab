@@ -20,6 +20,8 @@ const go = need('go');
 const fillAddCities = need('fillAddCities');
 const openSheet = need('openSheet');
 const render = need('render');
+/* فلترة الصور — مصدر واحد مشترك مع الشبكة (features/feed.js) */
+const filteredPhotos = need('filteredPhotos');
 
 /* state.map → state.map */
 export function renderMap(){
@@ -63,10 +65,10 @@ export function renderMap(){
     state.map.addControl(new GapBtn());
   }
   state.marks.clearLayers();
-  const q=($('q').value||'').trim();
-  const list=state.photos.filter(p=>p.lat&&p.lng&&p.media_type!=='video'
-    &&(state.cat==='all'||(p.category||'other')===state.cat)
-    &&(!q||p.title.includes(q)||(p.village||'').includes(q)||(p.city||'').includes(q)||(p.country||'').includes(q)));
+  /* نفس فلترة الشبكة حرفياً — المنطقة والمدينة والوسوم و«ديرتي/مسافر»
+     واختيار المحررين والسبق. سابقاً كانت الخريطة تطبّق ٣ شروط فقط،
+     فتعرض كل الصور وتخلط المحلي بعدسة مسافر. */
+  const list=(filteredPhotos()||[]).filter(p=>p.lat&&p.lng);
   const pts=[];
   list.forEach(p=>{
     const cl=(typeof state.claimMap!=='undefined'&&state.claimMap)?state.claimMap[p.id]:null;

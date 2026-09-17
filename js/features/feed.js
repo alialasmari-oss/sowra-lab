@@ -78,15 +78,19 @@ export function fillAddCities(){
   $('villList').innerHTML=(r&&geo.VILL[r]?geo.VILL[r]:[]).map(v=>`<option value="${v}">`).join('');
 }
 
-export function render(){
-  if(state.viewMode==='map')return;
-  const q=$('q').value.trim(), r=$('fRegion').value, c=$('fCity').value;
-  const mw=$('mapWrap');if(mw)mw.style.display='none';
-  $('feed').style.display='';
+/* ═══ مصدر الفلترة الوحيد ═══
+   الشبكة والخريطة تناديان هذه الدالة نفسها.
+   ⚠️ لا تكرّر منطق الفلترة بمكان آخر — التكرار هو سبب تجاهل الخريطة
+   للفلاتر سابقاً (كانت تطبّق ٣ شروط من ٨). */
+export function filteredPhotos(){
+  const q=($('q')?.value||'').trim();
+  const r=$('fRegion')?$('fRegion').value:'';
+  const c=$('fCity')?$('fCity').value:'';
   const abroadView=(state.scope==='abroad');
+
   let list=state.photos.filter(p=>!!p.abroad===abroadView&&p.media_type!=='video');
   if(state.onlyEc)list=list.filter(p=>p.editors_choice);
-  if(state.onlyClaims)list=list.filter(p=>state.claimMap[p.id]);
+  if(state.onlyClaims)list=list.filter(p=>state.claimMap&&state.claimMap[p.id]);
   if(state.tags&&state.tags.length){
     list=list.filter(p=>{
       const t=p.tags||[];
@@ -94,14 +98,26 @@ export function render(){
     });
   }
   if(state.cat!=='all')list=list.filter(p=>(p.category||'other')===state.cat);
+
   if(abroadView){
-    list=list.filter(p=>!q||p.title.includes(q)||(p.country||'').includes(q));
+    list=list.filter(p=>!q||(p.title||'').includes(q)||(p.country||'').includes(q));
   }else{
     list=list.filter(p=>
       (!r||p.region===r)&&(!c||p.city===c)&&
-      (!q||p.title.includes(q)||(p.village||'').includes(q)||p.city.includes(q)||p.region.includes(q))
+      (!q||(p.title||'').includes(q)||(p.village||'').includes(q)
+        ||(p.city||'').includes(q)||(p.region||'').includes(q))
     );
   }
+  return list;
+}
+
+export function render(){
+  /* كل أزرار الفلترة تنادي render — فلو كنا بالخريطة نحدّثها هي.
+     سابقاً كان هنا return فقط، فتغيير الفلتر وأنت بالخريطة لا يفعل شيئاً. */
+  if(state.viewMode==='map'){ try{ renderMap(); }catch(e){ console.warn('renderMap', e); } return; }
+  const mw=$('mapWrap');if(mw)mw.style.display='none';
+  $('feed').style.display='';
+  let list=filteredPhotos();
   // الترتيب يعمل بالنطاقين
   if(state.sort==='new'){
     list.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));

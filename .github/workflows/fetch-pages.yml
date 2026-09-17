@@ -1,0 +1,46 @@
+name: جلب صفحات المحتوى من sowra.app
+
+on:
+  workflow_dispatch:          # تشغيل يدوي من تبويب Actions
+
+permissions:
+  contents: write             # لازمة حتى يستطيع حفظ الملفات بالمستودع
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: سحب المستودع
+        uses: actions/checkout@v4
+
+      - name: تنزيل الصفحات
+        run: |
+          ok=0; fail=0
+          for f in about.html terms.html privacy.html delete-account.html en.html; do
+            if curl -fsSL "https://sowra.app/$f" -o "$f"; then
+              echo "✅ $f  ($(wc -c < "$f") بايت)"
+              ok=$((ok+1))
+            else
+              echo "❌ $f  تعذر التنزيل"
+              fail=$((fail+1))
+            fi
+          done
+          echo "---"
+          echo "نجح: $ok · فشل: $fail"
+          if [ "$ok" -eq 0 ]; then
+            echo "لم يُنزَّل أي ملف — أوقفنا العملية"
+            exit 1
+          fi
+
+      - name: حفظها بالمستودع
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- about.html terms.html privacy.html delete-account.html en.html 2>/dev/null || true
+          if git diff --staged --quiet; then
+            echo "لا جديد — الملفات مطابقة لما بالمستودع"
+          else
+            git commit -m "جلب صفحات المحتوى من sowra.app"
+            git push
+            echo "تم الحفظ ✅"
+          fi

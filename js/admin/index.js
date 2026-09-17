@@ -202,16 +202,16 @@ export function admRender(){
           ${p.profiles?.banned?`<span style="font-size:11px;padding:3px 9px;border-radius:10px;font-weight:700;background:rgba(192,57,43,.3);color:#fff;border:1px solid var(--sadu)">صاحبها محظور</span>`:''}
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn" style="font-size:12px;padding:8px 12px;${p.hidden?'background:var(--palm)':'background:var(--card2);border:1px solid var(--line)'}" onclick="admHide(${p.id},${!p.hidden})">${p.hidden?'👁️ إظهار':'🙈 إخفاء'}</button>
+          <button class="btn" title="${p.hidden?'إظهار الصورة للزوار مرة أخرى':'إخفاء الصورة عن الزوار — تبقى محفوظة ويمكن إرجاعها'}" style="font-size:12px;padding:8px 12px;${p.hidden?'background:var(--palm)':'background:var(--card2);border:1px solid var(--line)'}" onclick="admHide(${p.id},${!p.hidden})">${p.hidden?'👁️ إظهار':'🙈 إخفاء'}</button>
           ${isCurator()?(p.editors_choice
-            ? `<button class="btn" style="font-size:12px;padding:8px 12px;background:var(--qteal)" onclick="ecRevoke(${p.id})">🏵️ اسحب الوسام</button>`
-            : `<button class="btn" style="font-size:12px;padding:8px 12px;background:var(--card2);border:1px solid var(--qteal);color:var(--qteal)" onclick="ecNominate(${p.id})">🏵️ رشّحها</button>`):''}
-          <button class="btn" style="font-size:12px;padding:8px 12px" onclick="admDel(${p.id},'${p.image_path}')">🗑️ حذف نهائي</button>
-          <button class="btn" style="font-size:12px;padding:8px 12px;background:var(--star);color:var(--ink)" onclick="admWeekAdd(${p.id})">🏆 رشّح</button>
-          <button class="btn" style="font-size:12px;padding:8px 12px;background:var(--card2);border:1px solid var(--line);color:var(--txt)" onclick="admClearBadges(${p.id})">🗳️ مسح الأوسمة</button>
-          <button class="btn" style="font-size:12px;padding:8px 12px;background:var(--star);color:var(--ink)" onclick="admAddToQuest(${p.id})">🗝️ لكنز</button>
-          <button class="btn" style="font-size:12px;padding:8px 12px;${p.profiles?.banned?'background:var(--palm)':'background:var(--card2);border:1px solid var(--line)'}" onclick="admBan('${p.user_id}',${!(p.profiles?.banned)})">${p.profiles?.banned?'فك الحظر':'⛔ حظر المصور'}</button>
-          ${rc?`<button class="btn" style="font-size:12px;padding:8px 12px;background:var(--card2);border:1px solid var(--line)" onclick="admClear(${p.id})">مسح البلاغات</button>`:''}
+            ? `<button class="btn" title="سحب وسام «اختيار المحررين» من هذه الصورة" style="font-size:12px;padding:8px 12px;background:var(--qteal)" onclick="ecRevoke(${p.id})">🏵️ اسحب الوسام</button>`
+            : `<button class="btn" title="منح الصورة وسام «اختيار المحررين»" style="font-size:12px;padding:8px 12px;background:var(--card2);border:1px solid var(--qteal);color:var(--qteal)" onclick="ecNominate(${p.id})">🏵️ رشّحها</button>`):''}
+          <button class="btn" title="حذف الصورة وملفها من التخزين نهائياً — لا رجعة" style="font-size:12px;padding:8px 12px" onclick="admDel(${p.id},'${p.image_path}')">🗑️ حذف نهائي</button>
+          <button class="btn" title="ترشيح الصورة لمسابقة «لقطة الأسبوع»" style="font-size:12px;padding:8px 12px;background:var(--star);color:var(--ink)" onclick="admWeekAdd(${p.id})">🏆 رشّح</button>
+          <button class="btn" title="مسح أوسمة الأعضاء (التقييمات الرمزية) عن هذه الصورة" style="font-size:12px;padding:8px 12px;background:var(--card2);border:1px solid var(--line);color:var(--txt)" onclick="admClearBadges(${p.id})">🗳️ مسح الأوسمة</button>
+          <button class="btn" title="إضافة الصورة إلى أحد «كنوز الديرة»" style="font-size:12px;padding:8px 12px;background:var(--star);color:var(--ink)" onclick="admAddToQuest(${p.id})">🗝️ لكنز</button>
+          <button class="btn" title="${p.profiles?.banned?'فك الحظر عن صاحب الصورة ليعود للنشر':'حظر صاحب الصورة من النشر بالمنصة'}" style="font-size:12px;padding:8px 12px;${p.profiles?.banned?'background:var(--palm)':'background:var(--card2);border:1px solid var(--line)'}" onclick="admBan('${p.user_id}',${!(p.profiles?.banned)})">${p.profiles?.banned?'فك الحظر':'⛔ حظر المصور'}</button>
+          ${rc?`<button class="btn" title="مسح البلاغات المسجّلة على هذه الصورة" style="font-size:12px;padding:8px 12px;background:var(--card2);border:1px solid var(--line)" onclick="admClear(${p.id})">مسح البلاغات</button>`:''}
         </div>
       </div>
     </div>`;

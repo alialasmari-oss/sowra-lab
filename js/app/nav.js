@@ -28,6 +28,7 @@ const loadSponsor = need('loadSponsor');
 const loadChallenge = need('loadChallenge');
 const initHero = need('initHero');
 const showNearby = need('showNearby');
+const checkNearby = need('checkNearby');
 const loadWeatherTip = need('loadWeatherTip');
 const initGoogleBtn = need('initGoogleBtn');
 const render = need('render');
@@ -244,8 +245,12 @@ export function saveViewPrefs(){
 
 export function applyViewPrefs(){
   const p=getViewPrefs();
+  /* متماثل: الإطفاء يخفي، والتشغيل يعيد الفحص فوراً.
+     كان الإطفاء وحده مُنفَّذاً، فمن يعيد تشغيل المفتاح لا يرى شيئاً
+     حتى يحدّث الصفحة. checkNearby تحترم التفضيل بنفسها. */
   const na=document.getElementById('nearAlert');
   if(na&&!p.near)na.style.display='none';
+  else if(na&&p.near&&typeof checkNearby==='function')checkNearby();
   const hero=document.getElementById('homeHero');
   const wt=document.getElementById('weatherTip');
   const ch=document.getElementById('challengeStrip');

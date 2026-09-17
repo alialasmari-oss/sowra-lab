@@ -7,6 +7,12 @@
 /* حارس الصيانة — يعمل قبل رسم الصفحة */
 (function(){
   var U="https://gquzjaxpqeggknhipmzk.supabase.co", K="sb_publishable_BNp6Fg3VLXa1Pf4V6QjncQ_f496PquX";
+    /* عودة من تسجيل دخول خارجي (جوجل) — لا تخطفها الستارة.
+     الرابط يعود بـ?code= بلا ?admin=1، فكان الحارس يحوّله لصفحة الصيانة
+     قبل أن تُكمل Supabase تبادل الرمز، فيتعذّر الدخول بجوجل أثناء الصيانة. */
+  try{
+    if(location.search.indexOf("code=")>-1 || location.hash.indexOf("access_token")>-1) return;
+  }catch(e){}
   var isAdm=false;
   try{ isAdm=localStorage.getItem("sowra_admin")==="1"; }catch(e){}
   /* مفتاح احتياطي: sowra.app/?admin=1 — يتجاوز الستارة ويثبّت الصلاحية */

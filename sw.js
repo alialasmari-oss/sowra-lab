@@ -16,7 +16,17 @@ self.addEventListener('install', e => {
 });
 
 self.addEventListener('activate', e => {
-  e.waitUntil(self.clients.claim());
+  /* العامل القديم بالإنتاج كان يخزّن الملفات بذاكرة اسمها sowra-v1، وفيها
+     نسخة من index.html القديم الذي يستدعي الملفات المسطّحة (photos.js…).
+     بعد التبديل تختفي تلك الملفات، فلو بقيت الذاكرة وسُحبت منها صفحة
+     عند تعثّر الشبكة لظهر للمستخدم تطبيق ميّت. نمسحها كلها. */
+  e.waitUntil((async () => {
+    try{
+      const ks = await caches.keys();
+      await Promise.all(ks.map(k => caches.delete(k)));
+    }catch(err){}
+    await self.clients.claim();
+  })());
 });
 
 /* ═══ استقبال الإشعار ═══
@@ -58,6 +68,7 @@ self.addEventListener('push', event => {
       lang: 'ar',
       tag: p.tag,
       renotify: !!p.tag,
+      vibrate: [60, 40, 60],
       data: { url: p.url }
     })
   );

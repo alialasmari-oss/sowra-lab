@@ -95,109 +95,25 @@ export function go(p){
    عبر openAdmin المنشور بالجسر (main.js). فـgo('adm') وحدها تعرض
    اللوحة بلا دوالها — تظهر الأزرار ولا يعمل أي منها. */
 async function enterAdmin(){
-  /* ⚠️ ترتيب التقييم: main.js يستورد nav.js، فيُقيَّم nav.js أولاً —
-     أي أن الجسر (window.openAdmin) قد لا يكون نُشر بعد حين نصل هنا.
-     ننتظر ظهوره بدل السقوط على go('adm') التي تفتح لوحة بلا دوال. */
-  for(let i = 0; i < 40 && typeof window.openAdmin !== 'function'; i++){
-    await new Promise(r => setTimeout(r, 100));      /* حتى ٤ ثوانٍ */
+  /* لوحة الإشراف وحدة كسولة: openAdmin المنشور من main.js يحمّلها ثم
+     يفتحها. لا نستعمل go('adm') مباشرة — تعرض اللوحة بلا دوالها.
+     ولا حاجة لانتظار الجسر: boot() لا تعمل إلا بعد أن ينشره main.js. */
+  if(typeof window.openAdmin !== 'function'){
+    console.error('[adm] الجسر غير منشور — لم تُفتح اللوحة');
+    toast('تعذر تحميل لوحة الإشراف — حدّث الصفحة', true);
+    return;
   }
-
-  if(typeof window.openAdmin === 'function'){
-    try{
-      await window.openAdmin();
-      return;
-    }catch(e){ console.error('[adm] تعذر فتح اللوحة', e); }
+  try{
+    await window.openAdmin();
+  }catch(e){
+    console.error('[adm] تعذر فتح اللوحة', e);
+    toast('تعذر فتح لوحة الإشراف', true);
   }
-
-  /* لا نفتح لوحة بأزرار ميتة — نخبر المستخدم بوضوح */
-  console.error('[adm] الجسر لم يجهز — لم تُفتح اللوحة');
-  if(typeof toast === 'function') toast('تعذر تحميل لوحة الإشراف — حدّث الصفحة', true);
 }
 
 /* ============ البداية ============ */
 
-(async()=>{
-  if(window.__BOOT_FAIL){return}
-  try{initTheme();}catch(e){}
-  try{await handleAuthReturn();}catch(e){}
-  try{initEnBar();}catch(e){}
-  try{initViewPrefs();}catch(e){}
-  // رابط طوارئ: sowra.app/?admin=1 → يفتح لوحة الإشراف مباشرة
-  try{
-    if(location.search.indexOf('admin=1')>-1||sessionStorage.getItem('open_admin')==='1'){
-      /* النيّة تبقى محفوظة حتى تُستعمل فعلاً.
-         سابقاً كانت تُمسح فوراً، وعند تسجيل الدخول بجوجل يعود المتصفح
-         للرابط بدون ?admin=1 فتضيع النيّة ويهبط المالك بالصفحة الرئيسية. */
-      const explicit = location.search.indexOf('admin=1')>-1;
-      try{sessionStorage.setItem('open_admin','1')}catch(e){}
-
-      const openAdm = async () => {
-        try{
-          const g=document.getElementById('admGear');
-          if(g)g.style.display='block';
-          await enterAdmin();
-          try{sessionStorage.removeItem('open_admin')}catch(e){}
-        }catch(e){}
-      };
-
-      /* ننتظر checkAdmin — قد لا تكون المصادقة اكتملت بعد،
-         خصوصاً بالعودة من تسجيل الدخول */
-      let tries=0;
-      const waitAdmin = () => {
-        if(state.isAdmin) return openAdm();
-        if(++tries > 26){                    /* ≈ ٨ ثوانٍ */
-          /* مخرج الطوارئ: الرابط الصريح ?admin=1 يفتح اللوحة
-             حتى لو تعذّر التحقق (خلل بالاتصال مثلاً).
-             الصلاحيات الحقيقية تبقى محمية بقواعد RLS بالخادم. */
-          if(explicit){ state.isAdmin=true; openAdm(); }
-          else{ try{sessionStorage.removeItem('open_admin')}catch(e){} }
-          return;
-        }
-        setTimeout(waitAdmin,300);
-      };
-      setTimeout(waitAdmin,600);
-    }
-  }catch(e){}
-
-  try{if(typeof renderTagRow==='function')renderTagRow();}catch(e){}
-  try{if(typeof renderFdTags==='function')renderFdTags();}catch(e){}
-  const authP=ensureAuth().then(async ()=>{
-    await checkAdmin();          /* كان يُنادى بلا await — فتُقرأ state.isAdmin قبل أن تُضبط */
-    loadFavs();
-    /* عودة من تسجيل دخول خارجي (جوجل): المشرف يدخل لوحة الإشراف
-       لا الصفحة الرئيسية. العلامة تُوضع قبل التحويل بـfeatures/account.js */
-    try{
-      if(sessionStorage.getItem('post_login')==='1'){
-        sessionStorage.removeItem('post_login');
-        if(state.isAdmin){
-          await enterAdmin();
-          try{sessionStorage.removeItem('open_admin')}catch(e){}
-        }
-      }
-    }catch(e){}
-  }).catch(e=>{});
-  try{
-    /* القوائم بُنيت بـmain.js — نكتفي بالصور */
-    await loadPhotos();
-    loadWeek();loadSponsor();loadChallenge();
-    initHero();
-    showNearby();
-    if(typeof loadWeatherTip==='function')setTimeout(loadWeatherTip,400);
-    if(typeof initGoogleBtn==='function')initGoogleBtn();
-    // محاولات متتابعة حتى تجهز المفاتيح
-    let _gt=0;
-    const _gi=setInterval(function(){
-      _gt++;
-      if(state.banner||_gt>12){
-        clearInterval(_gi);
-        if(typeof initGoogleBtn==='function')initGoogleBtn();
-      }
-    },500);
-  }catch(e){
-    $('feed').innerHTML=`<div class="empty"><span class="big">⚠️</span>تعذر تحميل الصور<br>${e.message||''}</div>`;
-  }
-  await authP;
-})();
+/* الإقلاع الذاتي حُذف — main.js ينادي boot() المُصدَّرة بعد نشر الجسر */
 
 /* ====== Tap overlay للجوال ====== */
 document.addEventListener('click',function(e){
@@ -373,10 +289,56 @@ export async function boot(){
   }catch(e){}
 
   try{ initTheme(); }catch(e){}
+  try{ await handleAuthReturn(); }catch(e){}
+  try{ renderTagRow(); }catch(e){}
+  try{ renderFdTags(); }catch(e){}
+
+  /* ═══ نيّة الدخول للوحة الإشراف ═══
+     ثلاثة مصادر: رابط الطوارئ ?admin=1 · نيّة محفوظة · عودة من تسجيل دخول */
+  const explicitAdmin = location.search.indexOf('admin=1') > -1;
+  let wantAdmin = explicitAdmin;
+  try{
+    wantAdmin = wantAdmin
+      || sessionStorage.getItem('open_admin') === '1'
+      || sessionStorage.getItem('post_login') === '1';
+  }catch(e){}
+  if(explicitAdmin){ try{ sessionStorage.setItem('open_admin','1'); }catch(e){} }
 
   const authP = ensureAuth()
-    .then(() => { checkAdmin(); loadFavs(); })
+    .then(async () => { await checkAdmin(); loadFavs(); })
     .catch(() => {});
+
+  /* لو النيّة موجودة: ننتظر التحقق وندخل اللوحة قبل رسم الخلاصة.
+     وإلا تُرسم الرئيسية ثم تُستبدل باللوحة — وهو الوميض الذي كان يظهر.
+     نخفي صفحة الخلاصة ريثما يُحسم الأمر، بمهلة أمان تعيدها مهما حدث. */
+  if(wantAdmin){
+    /* الإخفاء نفسه يحدث بالـhead قبل أول رسم (class adm-pending).
+       هنا نرفعه فقط متى ما حُسم الأمر. */
+    const reveal = () => document.documentElement.classList.remove('adm-pending');
+    const safety = setTimeout(reveal, 6000);
+    try{
+      await authP;
+      try{ sessionStorage.removeItem('post_login'); }catch(e){}
+
+      /* مخرج الطوارئ: الرابط الصريح يفتح اللوحة حتى لو تعذّر التحقق.
+         الصلاحيات الحقيقية محمية بقواعد RLS بالخادم. */
+      if(!state.isAdmin && explicitAdmin) state.isAdmin = true;
+
+      if(state.isAdmin){
+        const g = $('admGear');
+        if(g) g.style.display = 'block';
+        await enterAdmin();
+        try{ sessionStorage.removeItem('open_admin'); }catch(e){}
+      }else{
+        try{ sessionStorage.removeItem('open_admin'); }catch(e){}
+      }
+    }catch(e){
+      console.error('[boot] تعذر الدخول للوحة الإشراف', e);
+    }finally{
+      clearTimeout(safety);
+      reveal();
+    }
+  }
 
   try{
     /* الأماكن والقوائم بُنيت بـmain.js — نكتفي بالصور */
@@ -406,7 +368,7 @@ export async function boot(){
   try{ initViewPrefs(); }catch(e){}
   try{ maybeAskNotifs(); }catch(e){}
   try{ initEnBar(); }catch(e){}
-  try{ handleAuthReturn(); }catch(e){}
+  /* handleAuthReturn نُقلت لأول boot — كانت تُنادى مرتين */
 
   installTapOverlay();
 }

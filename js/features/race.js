@@ -58,7 +58,9 @@ export async function openRace(){
     if(mine&&i>0){
       const gap=state.race[i-1].total-r.total;
       const gapNeed=Math.ceil(gap/10);
-      html+=`<div class="race-gap">🔥 تحتاج <b>${need}</b> ${need===1?'صورة':'صور'} لتتجاوز <b>${esc(state.race[i-1].region)}</b></div>`;
+      /* ⚠️ كان هنا المتغيّر need — وهو الدالة المستوردة من core/hub.js
+         لا العدد، فتُطبع شيفرتها كاملة داخل الرسالة. العدد اسمه gapNeed. */
+      html+=`<div class="race-gap">🔥 تحتاج <b>${gapNeed}</b> ${gapNeed===1?'صورة':'صور'} لتتجاوز <b>${esc(state.race[i-1].region)}</b></div>`;
     }
   });
   el.innerHTML=html;

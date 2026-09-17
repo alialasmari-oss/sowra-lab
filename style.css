@@ -202,7 +202,6 @@ nav{position:fixed;bottom:0;left:0;right:0;width:100%;z-index:30;background:var(
 .fd-chips{display:flex;flex-wrap:wrap;gap:7px}
 .fd-chip{background:var(--card2);border:1.5px solid var(--line);border-radius:16px;padding:6px 13px;font-family:'Tajawal';font-size:12.5px;font-weight:700;color:var(--txt-dim);cursor:pointer}
 .fd-chip.on{background:var(--sadu);border-color:var(--sadu);color:#fff}
-.nearby-title{font-size:14px;font-weight:700;padding:6px 2px 8px;color:var(--ink)}
 .sponsor-side{background:var(--card);border:1.5px solid var(--star);border-radius:14px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;gap:12px}
 .sponsor-side img{width:48px;height:48px;border-radius:10px;object-fit:cover;border:1px solid var(--line);flex-shrink:0}
 .sponsor-side .sp-info{min-width:0;flex:1}
@@ -252,18 +251,6 @@ nav{position:fixed;bottom:0;left:0;right:0;width:100%;z-index:30;background:var(
    auto-fit يطوي الأعمدة الفارغة: صورة واحدة تملأ السطر، واثنتان
    عمودان، وأربع تصير ٢×٢ على الجوال وصفاً واحداً على الشاشة العريضة.
    لا خانات فارغة مهما كان العدد، والحد الأقصى أربع بالشيفرة. */
-/* صندوق يحتوي القسم كله فيتميّز عن بقية صور الخلاصة.
-   شريط سدو على الحافة الابتدائية (يمين بالعربية) يجعله يُقرأ كوحدة
-   واحدة لا كصور سائبة، والألوان متغيّرات الهوية فيتبع الوضع الليلي. */
-#nearbyWrap{background:var(--card);border:1.5px solid var(--line);
-  border-inline-start:4px solid var(--sadu);border-radius:16px;
-  padding:12px 12px 14px;margin-bottom:14px;
-  box-shadow:0 2px 8px rgba(36,31,28,.07)}
-#nearbyWrap .nearby-title{padding:2px 2px 10px;color:var(--sand)}
-#nearbyFeed{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
-/* على الشاشة العريضة نحدّ عرض البطاقة، وإلا مدّت صورةٌ واحدة نفسها
-   على ١١٠٠ بكسل بارتفاع ١٥٠ فتصير شريطاً مشوّهاً لا بطاقة. */
-@media(min-width:600px){#nearbyFeed{grid-template-columns:repeat(auto-fit,minmax(190px,270px));justify-content:start}}
 .view-toggle-pair{display:flex;gap:2px;background:var(--card2);border:1.5px solid var(--line);border-radius:10px;padding:3px}
 /* ====== الأيقونة بالهيدر ====== */
 .hdr-icon{width:52px;height:52px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid var(--line)}
@@ -819,19 +806,6 @@ body.dark .claim-box.dbt .claim-state{background:#33201D}
 .ch-ideas button:active{transform:scale(.96);border-color:var(--qblue)}
 
 /* ====== أنت قرب صور ====== */
-.near-alert{background:linear-gradient(135deg,#EAF4EE,var(--card));border:2px solid var(--palm);border-radius:16px;padding:14px 16px;margin-bottom:12px;box-shadow:0 3px 10px rgba(46,139,87,.16);animation:naIn .35s ease}
-@keyframes naIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
-.na-head{display:flex;align-items:center;gap:9px;margin-bottom:8px}
-.na-head b{font-family:'Reem Kufi',sans-serif;font-size:16px;color:var(--palm);flex:1}
-.na-close{background:none;border:none;color:var(--txt-dim);font-size:15px;cursor:pointer;padding:2px 6px}
-.na-list{display:flex;gap:9px;overflow-x:auto;padding-bottom:3px;scrollbar-width:none}
-.na-list::-webkit-scrollbar{display:none}
-.na-item{flex:0 0 auto;width:96px;cursor:pointer}
-.na-thumb{width:96px;height:96px;border-radius:12px;object-fit:cover;display:block;border:1.5px solid var(--line)}
-.na-name{font-size:11px;font-weight:700;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
-.na-dist{font-size:10.5px;color:var(--palm);font-weight:700;text-align:center}
-.na-cta{font-size:12px;color:var(--txt-dim);margin-top:9px;line-height:1.8}
-body.dark .near-alert{background:linear-gradient(135deg,#1B2A21,var(--card))}
 
 /* ====== مؤشر التحميل التدريجي ====== */
 .feed-sentinel{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:7px;padding:26px 0}

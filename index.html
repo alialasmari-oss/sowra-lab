@@ -182,7 +182,7 @@
         <div class="fd-section">
           <div class="fd-label">ما يظهر بالرئيسية</div>
           <div class="fd-view">
-            <label class="fd-sw"><input type="checkbox" id="swNear" onchange="saveViewPrefs()"><span>📍 تنبيه الصور القريبة</span></label>
+            <label class="fd-sw"><input type="checkbox" id="swNear" onchange="saveViewPrefs()"><span>🔔 نبّهني إذا مررت قرب صورة</span></label>
             <label class="fd-sw"><input type="checkbox" id="swHero" onchange="saveViewPrefs()"><span>📍 بنر ديرتك</span></label>
             <label class="fd-sw"><input type="checkbox" id="swWeather" onchange="saveViewPrefs()"><span>🌤️ نصيحة الطقس</span></label>
             <label class="fd-sw"><input type="checkbox" id="swChallenge" onchange="saveViewPrefs()"><span>🎯 تحدي الأسبوع</span></label>
@@ -214,7 +214,6 @@
 
 <div class="page on" id="page-feed">
   <div id="newsBanner" class="news-banner" style="display:none"></div>
-  <div id="nearAlert" class="near-alert" style="display:none"></div>
   <div id="homeHero" class="home-hero" style="display:none"></div>
   <div id="weatherTip" class="wtip"><div class="wt-ic">🌤️</div><div class="wt-txt"><div class="wt-now" style="opacity:.45">نقرأ الطقس...</div><div class="wt-adv" style="opacity:.45">نجهّز نصيحة التصوير لموقعك</div></div></div>
   <div id="sponsorBar" style="display:none"></div>
@@ -234,10 +233,6 @@
       <div class="hstep"><span>🏆</span>صورتك تتصدر</div>
     </div>
     <button class="btn hero-cta" onclick="go('add')">📷 انشر أول صورة لك</button>
-  </div>
-  <div id="nearbyWrap" style="display:none">
-    <div class="nearby-title">📍 الأقرب إليك</div>
-    <div class="feed" id="nearbyFeed" style="margin-bottom:4px"></div>
   </div>
   <div id="sponsorSide" style="display:none" class="sponsor-side"></div>
   <div id="mapWrap" style="display:none">

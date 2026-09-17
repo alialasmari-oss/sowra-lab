@@ -138,7 +138,22 @@ export function go(p){
 
   try{if(typeof renderTagRow==='function')renderTagRow();}catch(e){}
   try{if(typeof renderFdTags==='function')renderFdTags();}catch(e){}
-  const authP=ensureAuth().then(()=>{checkAdmin();loadFavs();}).catch(e=>{});
+  const authP=ensureAuth().then(async ()=>{
+    await checkAdmin();          /* كان يُنادى بلا await — فتُقرأ state.isAdmin قبل أن تُضبط */
+    loadFavs();
+    /* عودة من تسجيل دخول خارجي (جوجل): المشرف يدخل لوحة الإشراف
+       لا الصفحة الرئيسية. العلامة تُوضع قبل التحويل بـfeatures/account.js */
+    try{
+      if(sessionStorage.getItem('post_login')==='1'){
+        sessionStorage.removeItem('post_login');
+        if(state.isAdmin){
+          go('adm');
+          try{sessionStorage.removeItem('open_admin')}catch(e){}
+          if(typeof loadReports==='function')loadReports();
+        }
+      }
+    }catch(e){}
+  }).catch(e=>{});
   try{
     /* القوائم بُنيت بـmain.js — نكتفي بالصور */
     await loadPhotos();

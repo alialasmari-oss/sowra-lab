@@ -239,11 +239,6 @@ export async function loadMyMsgs(){
 
 export async function signInWithGoogle(){
   try{
-    /* علامة «عائد من تسجيل دخول خارجي».
-       لا نعتمد على الرابط: مكتبة Supabase تلتقط ?code= وتمسحه من العنوان
-       تلقائياً (detectSessionInUrl) قبل أن يقرأه كودنا، فتضيع الإشارة.
-       sessionStorage يعبر رحلة جوجل لأنه نفس التبويب ونفس الأصل. */
-    try{sessionStorage.setItem('post_login','1')}catch(e){}
     /* origin وحده يسقط المسار: بـsowra-lab يصير
        https://alialasmari-oss.github.io بدل .../sowra-lab/ — ولأنه غير
        مُدرج بقائمة Redirect URLs يتجاهله Supabase ويرجع لـSite URL

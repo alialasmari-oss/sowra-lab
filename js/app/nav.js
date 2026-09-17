@@ -101,16 +101,38 @@ export function go(p){
   // رابط طوارئ: sowra.app/?admin=1 → يفتح لوحة الإشراف مباشرة
   try{
     if(location.search.indexOf('admin=1')>-1||sessionStorage.getItem('open_admin')==='1'){
-      sessionStorage.removeItem('open_admin');
-      setTimeout(function(){
+      /* النيّة تبقى محفوظة حتى تُستعمل فعلاً.
+         سابقاً كانت تُمسح فوراً، وعند تسجيل الدخول بجوجل يعود المتصفح
+         للرابط بدون ?admin=1 فتضيع النيّة ويهبط المالك بالصفحة الرئيسية. */
+      const explicit = location.search.indexOf('admin=1')>-1;
+      try{sessionStorage.setItem('open_admin','1')}catch(e){}
+
+      const openAdm = () => {
         try{
-          state.isAdmin=true;
           const g=document.getElementById('admGear');
           if(g)g.style.display='block';
           go('adm');
+          try{sessionStorage.removeItem('open_admin')}catch(e){}
           if(typeof loadReports==='function')loadReports();
         }catch(e){}
-      },600);
+      };
+
+      /* ننتظر checkAdmin — قد لا تكون المصادقة اكتملت بعد،
+         خصوصاً بالعودة من تسجيل الدخول */
+      let tries=0;
+      const waitAdmin = () => {
+        if(state.isAdmin) return openAdm();
+        if(++tries > 26){                    /* ≈ ٨ ثوانٍ */
+          /* مخرج الطوارئ: الرابط الصريح ?admin=1 يفتح اللوحة
+             حتى لو تعذّر التحقق (خلل بالاتصال مثلاً).
+             الصلاحيات الحقيقية تبقى محمية بقواعد RLS بالخادم. */
+          if(explicit){ state.isAdmin=true; openAdm(); }
+          else{ try{sessionStorage.removeItem('open_admin')}catch(e){} }
+          return;
+        }
+        setTimeout(waitAdmin,300);
+      };
+      setTimeout(waitAdmin,600);
     }
   }catch(e){}
 
@@ -238,6 +260,19 @@ export async function handleAuthReturn(){
       if(typeof renderAccIn==='function')await renderAccIn();
       toast('حياك الله 🌟');
       await loadPhotos();
+
+      /* ═══ المشرف يعود للوحة الإشراف ═══
+         العودة من تسجيل الدخول تصل بلا ?admin=1 (جوجل لا يعيد الرابط كما هو)،
+         فكان المالك يهبط بالصفحة الرئيسية. نعتمد على صفة الإشراف المتحقَّقة
+         لا على الرابط. لا يمسّ هذا التحديث العادي — handleAuthReturn
+         لا تعمل إلا عند العودة من تسجيل دخول فعلي. */
+      if(state.isAdmin){
+        try{
+          go('adm');
+          try{sessionStorage.removeItem('open_admin')}catch(e){}
+          if(typeof loadReports==='function')loadReports();
+        }catch(e){}
+      }
     }
   }catch(e){}
 }

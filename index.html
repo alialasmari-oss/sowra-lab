@@ -32,26 +32,6 @@
 })();
 </script>
 
-<script>
-/* نيّة الدخول للوحة الإشراف — تُقرأ قبل أوّل رسم.
-   بدونها تظهر الصفحة الرئيسية لحظة ثم تُستبدل باللوحة (وميض)،
-   لأن صفحة الخلاصة مرئية بالـHTML قبل أن يعمل أي جافاسكربت. */
-(function(){
-  try{
-    var want = location.search.indexOf('admin=1') > -1
-            || sessionStorage.getItem('open_admin') === '1'
-            || sessionStorage.getItem('post_login') === '1';
-    if(!want) return;
-    document.documentElement.classList.add('adm-pending');
-    /* مهلة أمان: لا تبقى الصفحة مخفية مهما حدث */
-    setTimeout(function(){
-      document.documentElement.classList.remove('adm-pending');
-    }, 6000);
-  }catch(e){}
-})();
-</script>
-<style>html.adm-pending #page-feed{visibility:hidden}</style>
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>صورة من بلدي</title>
 <meta name="application-name" content="صورة من بلدي">

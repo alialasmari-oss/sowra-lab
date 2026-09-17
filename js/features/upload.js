@@ -404,6 +404,10 @@ export async function addPhoto(){
 export function clearDraft(){
   try{
     const _is=$('inspectStatus');if(_is)_is.style.display='none';
+    /* بطاقة الاقتراح الذكي كانت تبقى معلّقة بعد إلغاء الصورة */
+    if(typeof hideSuggestions==='function')hideSuggestions();
+    if(typeof inspClose==='function')inspClose();
+    state.earlyRes=null; state.sugT=''; state.sugD='';
     setTimeout(syncPublishBtn,0);
     state.pendingFile=null;state.pendingBlob=null;state.pendingVideo=null;state.pendingGeo=null;
     const im=$('preview');

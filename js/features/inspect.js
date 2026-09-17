@@ -38,6 +38,80 @@ const maybeAskNotifs = need('maybeAskNotifs');
 const descCount = need('descCount');
 
 
+
+/* ═══ مربع منبثق لنتيجة الفاحص ═══
+   كانت النتيجة تُعرض بشريط تحت حقلي العنوان والوصف فلا يلاحظها أحد.
+   هذا المربع يبني نفسه ونمطه عند أول استعمال — فلا يحتاج تعديل
+   index.html ولا style.css، ويرث ألوان الهوية فيتبع الوضع الليلي. */
+
+let _inspResolve = null;
+
+function inspEnsure(){
+  if(document.getElementById('inspModal')) return;
+
+  const css = document.createElement('style');
+  css.id = 'inspModalCss';
+  css.textContent = `
+  #inspModal{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;
+    background:rgba(36,31,28,.55);backdrop-filter:blur(3px);padding:24px}
+  #inspModal.show{display:flex}
+  #inspModal .ip-card{background:var(--card);border:1.5px solid var(--ink);border-radius:20px;
+    padding:22px 20px 18px;max-width:360px;width:100%;text-align:center;
+    box-shadow:0 10px 34px rgba(36,31,28,.28);font-family:'Tajawal',sans-serif;
+    animation:ipIn .18s ease-out}
+  @keyframes ipIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+  #inspModal .ip-ic{font-size:40px;line-height:1;margin-bottom:10px}
+  #inspModal .ip-ttl{font-family:'Reem Kufi',sans-serif;font-size:19px;margin-bottom:8px;color:var(--txt)}
+  #inspModal .ip-bd{font-size:13.5px;line-height:2;color:var(--txt-dim)}
+  #inspModal .ip-btns{display:flex;gap:8px;margin-top:18px}
+  #inspModal .ip-btn{flex:1;padding:12px;border-radius:13px;border:1px solid var(--line);
+    background:var(--card2);color:var(--txt);font-family:'Tajawal';font-size:14px;font-weight:700;cursor:pointer}
+  #inspModal .ip-btn.main{background:var(--sadu);border-color:var(--sadu);color:#fff}
+  #inspModal.ok   .ip-ttl{color:var(--palm)}
+  #inspModal.bad  .ip-ttl{color:var(--sadu)}
+  #inspModal.warn .ip-ttl{color:var(--star)}
+  `;
+  document.head.appendChild(css);
+
+  const el = document.createElement('div');
+  el.id = 'inspModal';
+  el.innerHTML = '<div class="ip-card"><div class="ip-ic"></div><div class="ip-ttl"></div>'
+               + '<div class="ip-bd"></div><div class="ip-btns"></div></div>';
+  document.body.appendChild(el);
+}
+
+export function inspClose(val){
+  const el = document.getElementById('inspModal');
+  if(el) el.classList.remove('show');
+  const r = _inspResolve; _inspResolve = null;
+  if(r) r(val);
+}
+
+/* tone: busy | ok | bad | warn */
+export function inspPopup({ tone = 'busy', icon = '', title = '', body = '', buttons = null, autoMs = 0 } = {}){
+  inspEnsure();
+  const el = document.getElementById('inspModal');
+  el.className = 'show ' + tone;
+  el.querySelector('.ip-ic').textContent  = icon || ({busy:'🤖', ok:'✅', bad:'⛔', warn:'⚠️'})[tone] || '';
+  el.querySelector('.ip-ttl').textContent = title;
+  el.querySelector('.ip-bd').innerHTML    = body;
+
+  const bw = el.querySelector('.ip-btns');
+  bw.innerHTML = '';
+  return new Promise(resolve => {
+    _inspResolve = resolve;
+    (buttons || []).forEach(b => {
+      const btn = document.createElement('button');
+      btn.className = 'ip-btn' + (b.primary ? ' main' : '');
+      btn.textContent = b.label;
+      btn.onclick = () => inspClose(b.value);
+      bw.appendChild(btn);
+    });
+    if(!buttons && autoMs) setTimeout(() => inspClose(true), autoMs);
+    if(!buttons && !autoMs) resolve(true);      /* حالة الانتظار: لا تُغلق نفسها */
+  });
+}
+
 export async function inspectPhoto(blob){
   // سفاري: نصغّر أولاً لتفادي فشل التحويل
   try{
@@ -114,27 +188,22 @@ export async function inspectPhoto(blob){
 
 /* يرجع true إذا يُسمح بالمتابعة */
 export async function runInspection(blob){
-  const st=$('inspectStatus');
-  if(st){st.style.display='block';st.className='inspect-box';st.innerHTML='🤖 نفحص الصورة...'}
+  inspPopup({ tone:'busy', title:'نفحص الصورة…', body:'لحظات من فضلك' });
   const res=state.earlyRes||await inspectPhoto(blob);
   if(!res){
-    if(st){
-      if(state.inspErr){
-        st.className='inspect-box bad';
-        st.innerHTML='⚠️ <b>تعذر الفحص</b><br><span style="font-size:11px;direction:ltr;display:inline-block">'+esc(state.inspErr)+'</span>';
-        setTimeout(()=>{if(st)st.style.display='none'},9000);
-      }else st.style.display='none';
-    }
+    if(state.inspErr){
+      await inspPopup({ tone:'warn', title:'تعذر الفحص',
+        body:'<span style="direction:ltr;display:inline-block;font-size:11.5px">'+esc(state.inspErr)+'</span>',
+        buttons:[{label:'أكمل النشر', value:true, primary:true}] });
+    }else inspClose();
     return true;
   }
 
   // منع صريح
   if(res.nsfw||res.violence){
-    if(st){
-      st.className='inspect-box bad';
-      st.innerHTML='⛔ <b>الصورة مرفوضة</b><br><span>فيها محتوى مخالف لإرشادات النشر</span>';
-      setTimeout(()=>{if(st)st.style.display='none'},5000);
-    }
+    await inspPopup({ tone:'bad', title:'الصورة مرفوضة',
+      body:'فيها محتوى مخالف لإرشادات النشر — اختر صورة أخرى',
+      buttons:[{label:'حسناً', value:false, primary:true}] });
     return false;
   }
 
@@ -146,16 +215,14 @@ export async function runInspection(blob){
   if(res.military)warns.push('🚫 قد تكون منشأة عسكرية أو أمنية — تصويرها محظور نظاماً');
 
   if(warns.length){
-    if(st)st.style.display='none';
-    return confirm('تنبيه:\n\n'+warns.join('\n')+'\n\nتبي تكمل النشر؟');
+    return await inspPopup({ tone:'warn', title:'تنبيه قبل النشر',
+      body: warns.join('<br>'),
+      buttons:[{label:'أكمل النشر', value:true, primary:true},
+               {label:'تراجع',      value:false}] });
   }
 
   // نظيفة — نقترح التصنيف
-  if(st){
-    st.className='inspect-box ok';
-    st.innerHTML='✅ <b>الصورة سليمة</b>';
-    setTimeout(()=>{if(st)st.style.display='none'},2500);
-  }
+  inspPopup({ tone:'ok', title:'الصورة سليمة', body:'تمام — كمّل نشرك', autoMs:1800 });
   if(res.category&&$('aCat')){
     const opt=Array.from($('aCat').options).find(o=>o.value===res.category);
     if(opt)$('aCat').value=res.category;
@@ -252,22 +319,16 @@ export async function earlySuggest(){
     if(res.plate)warns.push('🚗 لوحة مركبة مقروءة');
     if(res.indoor_private)warns.push('🏠 تبدو من داخل منزل خاص');
     if(res.military)warns.push('🚫 قد تكون منشأة عسكرية — تصويرها محظور نظاماً');
-    const st=$('inspectStatus');
-    if(st){
-      if(res.nsfw||res.violence){
-        st.style.display='block';
-        st.className='inspect-box bad';
-        st.innerHTML='⛔ <b>الصورة مرفوضة</b><br><span style="font-size:12px">محتوى مخالف — اختر صورة أخرى</span>';
-      }else if(warns.length){
-        st.style.display='block';
-        st.className='inspect-box warn';
-        st.innerHTML='⚠️ <b>تنبيه</b><br><span style="font-size:12px;line-height:1.9">'+warns.join('<br>')+'</span>';
-      }else{
-        st.style.display='block';
-        st.className='inspect-box ok';
-        st.innerHTML='✅ <b>الصورة سليمة</b>';
-        setTimeout(()=>{if(st&&st.className.indexOf('ok')>-1)st.style.display='none'},2600);
-      }
+    if(res.nsfw||res.violence){
+      inspPopup({ tone:'bad', title:'الصورة مرفوضة',
+        body:'محتوى مخالف — اختر صورة أخرى',
+        buttons:[{label:'حسناً', value:false, primary:true}] });
+    }else if(warns.length){
+      inspPopup({ tone:'warn', title:'تنبيه',
+        body: warns.join('<br>'),
+        buttons:[{label:'فهمت', value:true, primary:true}] });
+    }else{
+      inspPopup({ tone:'ok', title:'الصورة سليمة', body:'تمام — كمّل بياناتك', autoMs:1600 });
     }
     // التصنيف
     if(res.category&&$('aCat')){

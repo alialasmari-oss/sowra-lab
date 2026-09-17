@@ -120,6 +120,23 @@ try{
   }
 }catch(e){}
 
+/* ═══ ٧) عناصر مستدعاة وغير موجودة ═══
+   الوحدات ترسم HTML داخل قوالب نصية. لو سقط سطر <input id="x"> عند
+   نقل ملف، يبقى $('x').click() قائماً ويرمي null عند الضغط فقط —
+   لا يكشفه أي فحص نصي للملفات. نجمع كل المعرّفات المعرَّفة (بالـHTML
+   وبقوالب الـJS) ونقابلها بكل ما يُطلب بـ$() أو getElementById. */
+let ghostIds = [];
+try{
+  let all = fs.readFileSync('./index.html','utf8');
+  for(const f of files) all += '\n' + read(f);
+  const defined = new Set();
+  for(const m of all.matchAll(/id\s*=\s*["']([A-Za-z_][\w-]*)["']/g)) defined.add(m[1]);
+  for(const m of all.matchAll(/\.id\s*=\s*['"]([A-Za-z_][\w-]*)['"]/g)) defined.add(m[1]);
+  const used = new Set();
+  for(const m of all.matchAll(/(?:getElementById|\$)\(\s*'([A-Za-z_][\w-]*)'\s*\)/g)) used.add(m[1]);
+  ghostIds = [...used].filter(id => !defined.has(id));
+}catch(e){}
+
 /* ═══ التقرير ═══ */
 const ok = s => `\x1b[32m${s}\x1b[0m`, bad = s => `\x1b[31m${s}\x1b[0m`, warn = s => `\x1b[33m${s}\x1b[0m`;
 
@@ -158,6 +175,9 @@ if(htmlGlobals.length){ fails++; htmlGlobals.forEach(h => console.log(`       ${
 
 line(!bodyClassErr, 'صنف الصفحة على body');
 if(bodyClassErr){ fails++; console.log(`       ${bodyClassErr}`); }
+
+line(!ghostIds.length, 'عنصر مستدعى ومفقود', ghostIds.length || '');
+if(ghostIds.length){ fails++; console.log(`       ${ghostIds.join(', ')}`); }
 
 console.log(`  ${big.length ? warn('⚠️') : ok('✅')} فوق ٤٠٠ سطر${' '.repeat(10)} ${big.length || ''}`);
 big.forEach(([f,n]) => console.log(`       ${f} — ${n}`));

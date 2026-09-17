@@ -176,7 +176,8 @@ export function confirmGeoPick(){
     if(mb)mb.style.display='none';
     closeGeoPick();
     toast('انحفظ الموقع 📍');
-    try{ fillPlaceFromGeo(c.lat,c.lng); }catch(e){ console.warn('fillPlaceFromGeo', e); }
+    /* force=true — الاختيار اليدوي يغلب أي منطقة/مدينة محفوظة من قبل */
+    try{ fillPlaceFromGeo(c.lat,c.lng,false,true); }catch(e){ console.warn('fillPlaceFromGeo', e); }
   }catch(e){
     console.error('[confirmGeoPick]', e);
     toast('تعذر الحفظ: '+((e&&e.message)||''),true);

@@ -466,9 +466,28 @@ export function tagName(k){
 
 /* ====== قراءة بيانات الكاميرا من EXIF ====== */
 
-export async function fillPlaceFromGeo(lat,lng,silent){
+export async function fillPlaceFromGeo(lat,lng,silent,force){
   try{
-    const info=await reverseGeo(lat,lng);
+    let info=await reverseGeo(lat,lng);
+
+    /* ═══ احتياطي محلي ═══
+       خدمة الأسماء (nominatim) تفشل أحياناً: محجوبة، أو تجاوزنا حدّها،
+       أو الشبكة بطيئة — وقتها كان الحقن يتوقف بصمت.
+       جدول COORDS عندنا محلي ولا يحتاج إنترنت، فنستعمله. */
+    if(!info || (!info.region && !info.city)){
+      try{
+        const nc = nearestCity(lat,lng);
+        if(nc && nc.city){
+          info = {
+            region : (info&&info.region ) || (nc.km<=200 ? nc.region : ''),
+            city   : (info&&info.city   ) || (nc.km<=60  ? nc.city   : ''),
+            village: (info&&info.village) || '',
+            country: (info&&info.country) || 'السعودية'
+          };
+        }
+      }catch(e){}
+    }
+
     if(!info)return null;
     state.geoPlace=info;
 
@@ -493,9 +512,10 @@ export async function fillPlaceFromGeo(lat,lng,silent){
       return info;
     }
 
+    /* force: المستخدم حدّد المكان بنفسه على الخريطة — اختياره يغلب أي قيمة سابقة */
     const rs=$('aRegion');
     const ro=findOpt(rs,info.region);
-    if(ro&&rs&&!rs.value){
+    if(ro&&rs&&(force||!rs.value)){
       rs.value=ro.value;
       if(typeof fillAddCities==='function')fillAddCities();
       await new Promise(r=>setTimeout(r,180));
@@ -503,11 +523,11 @@ export async function fillPlaceFromGeo(lat,lng,silent){
 
     const cs=$('aCity');
     const co=findOpt(cs,info.city)||findOpt(cs,info.village);
-    if(co&&cs&&!cs.value)cs.value=co.value;
+    if(co&&cs&&(force||!cs.value))cs.value=co.value;
 
     // القرية حقل نصي غالباً
     const vs=$('aVillage');
-    if(vs&&info.village&&!vs.value.trim()&&vs.tagName==='INPUT'){
+    if(vs&&info.village&&(force||!vs.value.trim())&&vs.tagName==='INPUT'){
       vs.value=info.village;
     }
 

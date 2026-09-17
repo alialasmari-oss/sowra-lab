@@ -62,7 +62,7 @@ export function initSelects(){
   const fr=$('fRegion'),ar=$('aRegion');
   fr.innerHTML='<option value="">كل المناطق</option>';
   ar.innerHTML='<option value="">اختر المنطقة</option>';
-  for(const r in GEO){fr.innerHTML+=`<option>${r}</option>`;ar.innerHTML+=`<option>${r}</option>`;}
+  for(const r in geo.GEO){fr.innerHTML+=`<option>${r}</option>`;ar.innerHTML+=`<option>${r}</option>`;}
 }
 
 export function fillCities(){

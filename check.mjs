@@ -102,6 +102,24 @@ try{
   }
 }catch(e){}
 
+/* ═══ ٦) صنف الصفحة الابتدائي على body ═══
+   style.css يحمل قواعد مثل body.page-feed #mainFilters{display:flex}.
+   وصنف body لا يضعه إلا go()، وgo() لا تُنادى عند أول تحميل — فأي
+   قاعدة معلّقة على body.page-… تسقط بصمت حتى يتنقّل المستخدم ويرجع.
+   الشرط: <body> يبدأ بصنف الصفحة المفتوحة فعلاً (التي تحمل class="page on"). */
+let bodyClassErr = '';
+try{
+  const html = fs.readFileSync('./index.html','utf8');
+  if(/body\.page-[a-z]+/.test(fs.readFileSync('./style.css','utf8'))){
+    const bodyTag = (html.match(/<body[^>]*>/) || [''])[0];
+    const onPage  = (html.match(/<div[^>]*class="page on"[^>]*id="page-([a-z]+)"/) || [])[1];
+    const onBody  = (bodyTag.match(/\bpage-([a-z]+)\b/) || [])[1];
+    if(!onBody)              bodyClassErr = `<body> بلا صنف صفحة — القواعد body.page-… لا تنطبق عند أول تحميل`;
+    else if(onPage && onBody !== onPage)
+                             bodyClassErr = `<body class="page-${onBody}"> لا يطابق الصفحة المفتوحة page-${onPage}`;
+  }
+}catch(e){}
+
 /* ═══ التقرير ═══ */
 const ok = s => `\x1b[32m${s}\x1b[0m`, bad = s => `\x1b[31m${s}\x1b[0m`, warn = s => `\x1b[33m${s}\x1b[0m`;
 
@@ -137,6 +155,9 @@ if(htmlMissing.length){
 
 line(!htmlGlobals.length, 'متغير قديم بالـHTML', htmlGlobals.length || '');
 if(htmlGlobals.length){ fails++; htmlGlobals.forEach(h => console.log(`       ${h}`)); }
+
+line(!bodyClassErr, 'صنف الصفحة على body');
+if(bodyClassErr){ fails++; console.log(`       ${bodyClassErr}`); }
 
 console.log(`  ${big.length ? warn('⚠️') : ok('✅')} فوق ٤٠٠ سطر${' '.repeat(10)} ${big.length || ''}`);
 big.forEach(([f,n]) => console.log(`       ${f} — ${n}`));

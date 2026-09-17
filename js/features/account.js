@@ -239,6 +239,9 @@ export async function loadMyMsgs(){
 
 export async function signInWithGoogle(){
   try{
+    /* علامة أن رحلة تسجيل الدخول بدأت من هنا فعلاً — يقرأها حارس
+       الصيانة ليعفي العودة وحدها، لا أي رابط يحمل ?code= */
+    try{ sessionStorage.setItem('oauth_pending','1'); }catch(e){}
     /* origin وحده يسقط المسار: بـsowra-lab يصير
        https://alialasmari-oss.github.io بدل .../sowra-lab/ — ولأنه غير
        مُدرج بقائمة Redirect URLs يتجاهله Supabase ويرجع لـSite URL

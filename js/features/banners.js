@@ -25,6 +25,7 @@ const loadSunTimes = need('loadSunTimes');
 /* ═══ من ميزات أخرى — عبر الحاجز (يمنع الدورات) ═══ */
 const addUserPin = need('addUserPin');
 const closeSheet = need('closeSheet');
+const openSheet = need('openSheet');
 const closeUni = need('closeUni');
 const detectMyRegion = need('detectMyRegion');
 const loadClaims = need('loadClaims');
@@ -168,16 +169,22 @@ export async function loadWeatherTip(){
    الآن الدالة تقرأ الموقع المحفوظ وتقرّر بنفسها: تظهر إن كان هناك ما
    يُعرض، وتخفي إن لم يكن — ويناديها كلٌّ من تحديد الموقع وsetView. */
 
-/* أقصى مسافة تُعدّ «قريبة». كانت ٣٠ كم، وهي ضيّقة على مساحة المملكة:
-   من وسط الرياض لا تلتقط إلا داخل المدينة، فيظهر القسم ببطاقة يتيمة
-   ويبدو معطّلاً. القسم يعرض الأقرب ستّاً على أي حال، والمسافة مكتوبة
-   على كل بطاقة، فالسقف يمنع ظهور صورة بعيدة بوصفها «قريبة» لا أكثر.
+/* أقصى مسافة تُعدّ «قريبة» — بطلب المالك: قريبة فعلاً لا مجازاً.
+   العنوان على الشاشة يُكتب من هذا الرقم نفسه، فلا يفترقان أبداً.
    غيّر الرقم وحده إن أردت توسيعه أو تضييقه. */
-const NEAR_KM = 250;
+const NEAR_KM = 3;
 
 export function renderNearby(){
   const wrap=$('nearbyWrap'), box=$('nearbyFeed');
   if(!wrap||!box)return;
+
+  /* مفتاحه الخاص بالفلتر — غير مفتاح البنر الأخضر */
+  try{
+    if(typeof getViewPrefs==='function' && getViewPrefs().nearby===false){
+      wrap.style.display='none'; return;
+    }
+  }catch(e){}
+
   const lat=window.__USER_LAT, lng=window.__USER_LNG;
   if(!lat||!lng){wrap.style.display='none';return}
 
@@ -185,11 +192,18 @@ export function renderNearby(){
   const near=(state.photos||[])
     .filter(p=>p.lat&&p.lng&&!p.abroad&&p.visibility!=='private'&&p.media_type!=='video'&&distKm(p)<=NEAR_KM)
     .sort((a,b)=>distKm(a)-distKm(b))
-    .slice(0,6);
+    .slice(0,4);   /* أربع على الأكثر — الشبكة تتسع وتضيق حسب العدد */
 
   if(!near.length){wrap.style.display='none';return}
 
   wrap.style.display='block';
+  /* العنوان يذكر المدى صراحةً ليفرّقه الزائر عن البنر الأخضر،
+     ومصدره NEAR_KM نفسه فلا يتخلّف عنه لو غيّرناه. */
+  const ttl=wrap.querySelector('.nearby-title');
+  if(ttl){
+    const ar=String(NEAR_KM).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
+    ttl.textContent='📍 الأقرب إليك · ضمن '+ar+' كم';
+  }
   box.innerHTML=near.map(p=>{
     const d=distKm(p);
     const dt=d<1?(Math.round(d*1000)+' م'):(d<10?d.toFixed(1)+' كم':Math.round(d)+' كم');
@@ -204,6 +218,155 @@ export function renderNearby(){
         </div>
       </div>`;
   }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════
+   تنبيه المرور — مربع منبثق يظهر حين تقترب من مكان صورة
+   البنر الأخضر يُرسم عند فتح الصفحة فقط، فمن يمشي بعدها لا
+   يراه. هنا نتابع الموقع باستمرار، وأول ما تدخل مدى صورة
+   لم تُنبَّه عليها بهذه الجلسة، يقفز المربع مرة واحدة.
+   ═══════════════════════════════════════════════════════ */
+
+const POP_KM = 2;            /* نفس مدى البنر الأخضر */
+let _watchId = null;
+
+/* الصور التي نُبِّه عليها بهذه الجلسة — حتى لا يتكرر المربع
+   على نفس الصورة كلما تذبذبت قراءة الـGPS. */
+function poppedIds(){
+  try{ return new Set(JSON.parse(sessionStorage.getItem('near_popped')||'[]')); }
+  catch(e){ return new Set(); }
+}
+function markPopped(id){
+  const s=poppedIds(); s.add(id);
+  try{ sessionStorage.setItem('near_popped',JSON.stringify([...s])); }catch(e){}
+}
+
+function nearPopEnsure(){
+  if(document.getElementById('nearPop')) return;
+  const css=document.createElement('style');
+  css.id='nearPopCss';
+  css.textContent=`
+  #nearPop{position:fixed;inset:0;z-index:9998;display:none;align-items:center;justify-content:center;
+    background:rgba(36,31,28,.55);backdrop-filter:blur(3px);padding:24px}
+  #nearPop.show{display:flex}
+  #nearPop .np-card{background:var(--card);border:2px solid var(--palm);border-radius:20px;
+    overflow:hidden;max-width:340px;width:100%;box-shadow:0 10px 34px rgba(36,31,28,.3);
+    font-family:'Tajawal',sans-serif;animation:npIn .2s ease-out}
+  @keyframes npIn{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:none}}
+  #nearPop .np-img{width:100%;height:160px;object-fit:cover;display:block;background:var(--card2)}
+  #nearPop .np-bd{padding:16px 18px 14px;text-align:center}
+  #nearPop .np-kick{font-size:12px;font-weight:700;color:var(--palm);margin-bottom:6px}
+  #nearPop .np-ttl{font-family:'Reem Kufi',sans-serif;font-size:18px;color:var(--txt);margin-bottom:4px}
+  #nearPop .np-sub{font-size:12.5px;color:var(--txt-dim);line-height:1.9}
+  #nearPop .np-btns{display:flex;gap:8px;margin-top:16px}
+  #nearPop .np-btn{flex:1;padding:12px;border-radius:13px;border:1px solid var(--line);
+    background:var(--card2);color:var(--txt);font-family:'Tajawal';font-size:14px;font-weight:700;cursor:pointer}
+  #nearPop .np-btn.main{background:var(--palm);border-color:var(--palm);color:#fff}
+  `;
+  document.head.appendChild(css);
+
+  const el=document.createElement('div');
+  el.id='nearPop';
+  el.innerHTML='<div class="np-card"><img class="np-img" alt=""><div class="np-bd">'
+             + '<div class="np-kick"></div><div class="np-ttl"></div><div class="np-sub"></div>'
+             + '<div class="np-btns"></div></div></div>';
+  el.addEventListener('click', ev=>{ if(ev.target===el) closeNearPop(); });
+  document.body.appendChild(el);
+}
+
+export function closeNearPop(){
+  const el=document.getElementById('nearPop');
+  if(el)el.classList.remove('show');
+}
+
+export function nearPop(p, km){
+  nearPopEnsure();
+  const el=document.getElementById('nearPop');
+  const dt = km<1 ? (Math.round(km*1000)+' متر') : (km.toFixed(1)+' كم');
+  el.querySelector('.np-img').src = thumbUrl(p.image_path);
+  el.querySelector('.np-img').onerror = function(){ this.onerror=null; this.src=imgUrl(p.image_path); };
+  el.querySelector('.np-kick').textContent = '📍 أنت قرب مكان مصوَّر';
+  el.querySelector('.np-ttl').textContent  = p.title||'';
+  el.querySelector('.np-sub').innerHTML    = esc(p.village||p.city||'') + ' · على بعد <b>' + dt + '</b>'
+    + (km<=0.5 ? '<br>تقدر توثّق زيارتك الآن 👣' : '<br>اقترب أكثر لتوثيق الزيارة');
+
+  const bw=el.querySelector('.np-btns');
+  bw.innerHTML='';
+  const open=document.createElement('button');
+  open.className='np-btn main'; open.textContent='افتحها';
+  open.onclick=()=>{ closeNearPop(); try{ openSheet(p.id); }catch(e){} };
+  const later=document.createElement('button');
+  later.className='np-btn'; later.textContent='لاحقاً';
+  later.onclick=()=>closeNearPop();
+  bw.appendChild(open); bw.appendChild(later);
+
+  el.classList.add('show');
+}
+
+/* يفحص الموقع الحالي: هل دخلنا مدى صورة جديدة؟ */
+export function maybePopNear(){
+  const el=document.getElementById('nearPop');
+  if(el&&el.classList.contains('show'))return;          /* مربع مفتوح — لا نزاحمه */
+  try{ if(typeof getViewPrefs==='function'&&getViewPrefs().near===false)return; }catch(e){}
+  try{ if(sessionStorage.getItem('near_hidden')==='1')return; }catch(e){}
+
+  const lat=window.__USER_LAT, lng=window.__USER_LNG;
+  if(!lat||!lng)return;
+
+  const me=(typeof currentUser==='function')?currentUser():null;
+  const seen=poppedIds();
+  const d=p=>Math.hypot(((p.lat||0)-lat)*111,(((p.lng||0)-lng)*111*Math.cos(lat*Math.PI/180)));
+
+  const hit=(state.photos||[])
+    .filter(p=>p.lat&&p.lng&&!p.abroad&&p.media_type!=='video'
+             &&p.visibility!=='private'
+             &&!(me&&p.user_id===me.id)      /* لا ننبّهك على صورتك أنت */
+             &&!seen.has(p.id)
+             &&d(p)<=POP_KM)
+    .sort((a,b)=>d(a)-d(b))[0];
+
+  if(!hit)return;
+  markPopped(hit.id);
+  nearPop(hit, d(hit));
+}
+
+/* متابعة الموقع — تبدأ مع الإقلاع وعند تشغيل المفتاح، وتتوقف عند إطفائه.
+
+   لماذا قراءة دورية لا watchPosition؟ جرّبت watchPosition فردّ
+   code 2 (POSITION_UNAVAILABLE) على بعض البيئات بينما
+   getCurrentPosition يعمل على نفس الجهاز — وهو معروف بتفاوته بين
+   المتصفحات. قراءة كل NEAR_TICK ثانية أبسط، تعمل حيثما يعمل تحديد
+   الموقع، وأخف على البطارية من تتبّع متصل. */
+
+const NEAR_TICK = 20000;   /* ٢٠ ثانية بين قراءة وأخرى */
+
+function readPosOnce(){
+  if(!navigator.geolocation)return;
+  navigator.geolocation.getCurrentPosition(pos=>{
+    window.__USER_LAT=pos.coords.latitude;
+    window.__USER_LNG=pos.coords.longitude;
+    try{ renderNearby(); }catch(e){}
+    try{ maybePopNear(); }catch(e){}
+  }, err=>{
+    /* كان الردّ فارغاً ()=>{} فيفشل تحديد الموقع بصمت تام
+       ولا يعرف أحد لماذا اختفت الأقسام. الآن يقول السبب. */
+    console.warn('[near] تعذّر تحديد الموقع — code '+err.code+' · '+err.message);
+    if(err.code===1)stopNearWatch();          /* رُفض الإذن — لا فائدة من الإلحاح */
+  }, { enableHighAccuracy:false, maximumAge:10000, timeout:15000 });
+}
+
+export function startNearWatch(){
+  if(_watchId!==null)return;
+  if(!navigator.geolocation)return;
+  try{ if(typeof getViewPrefs==='function'&&getViewPrefs().near===false)return; }catch(e){}
+  _watchId=setInterval(readPosOnce, NEAR_TICK);
+  readPosOnce();                              /* قراءة فورية بلا انتظار الدورة */
+}
+
+export function stopNearWatch(){
+  if(_watchId===null)return;
+  try{ clearInterval(_watchId); }catch(e){}
+  _watchId=null;
 }
 
 export function showNearby(){

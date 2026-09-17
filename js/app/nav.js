@@ -28,10 +28,10 @@ const loadSponsor = need('loadSponsor');
 const loadChallenge = need('loadChallenge');
 const initHero = need('initHero');
 const showNearby = need('showNearby');
-const checkNearby = need('checkNearby');
-const renderNearby = need('renderNearby');
+const ensurePos = need('ensurePos');
 const startNearWatch = need('startNearWatch');
 const stopNearWatch = need('stopNearWatch');
+const closeNearPop = need('closeNearPop');
 const loadWeatherTip = need('loadWeatherTip');
 const initGoogleBtn = need('initGoogleBtn');
 const render = need('render');
@@ -226,11 +226,10 @@ export async function handleAuthReturn(){
 /* ====== أقسام صفحة حسابي ====== */
 state.accOpen='';
 
-/* ميزتان مختلفتان رغم تشابه الاسم — ولكلٍّ مفتاحها:
-   near   → البنر الأخضر «أنت قرب N صور» (تنبيه ميداني للتوثيق)
-   nearby → قسم البطاقات «📍 الأقرب إليك» */
+/* near → تنبيه المرور المنبثق. حُذف معه البنر الأخضر وقسم
+   «الأقرب إليك» — ثلاثتها كانت تقول الشيء نفسه. */
 export function getViewPrefs(){
-  let p={hero:true,weather:true,challenge:true,near:true,nearby:true};
+  let p={hero:true,weather:true,challenge:true,near:true};
   try{
     const s=localStorage.getItem('sowra_view');
     if(s)p=Object.assign(p,JSON.parse(s));
@@ -241,31 +240,30 @@ export function getViewPrefs(){
 export function saveViewPrefs(){
   const p={
     near:!!(document.getElementById('swNear')&&document.getElementById('swNear').checked),
-    nearby:!!(document.getElementById('swNearby')&&document.getElementById('swNearby').checked),
     hero:!!(document.getElementById('swHero')&&document.getElementById('swHero').checked),
     weather:!!(document.getElementById('swWeather')&&document.getElementById('swWeather').checked),
     challenge:!!(document.getElementById('swChallenge')&&document.getElementById('swChallenge').checked)
   };
   try{localStorage.setItem('sowra_view',JSON.stringify(p))}catch(e){}
   applyViewPrefs();
+  /* ضغطة المستخدم الآن — لو كان التطبيق بلا موقع (تعذّر تحديده عند
+     الإقلاع مثلاً) فهذه لحظة طلبه، بلا كبح. بدونها يعيد المستخدم
+     تشغيل المفتاح فلا يعمل التنبيه أبداً حتى يحدّث الصفحة. */
+  if(p.near && typeof ensurePos==='function'){
+    try{ ensurePos(true); }catch(e){}
+  }
 }
 
 export function applyViewPrefs(){
   const p=getViewPrefs();
-  /* متماثل: الإطفاء يخفي، والتشغيل يعيد الفحص فوراً.
-     كان الإطفاء وحده مُنفَّذاً، فمن يعيد تشغيل المفتاح لا يرى شيئاً
-     حتى يحدّث الصفحة. checkNearby تحترم التفضيل بنفسها. */
-  const na=document.getElementById('nearAlert');
-  if(na&&!p.near){
-    na.style.display='none';
-    if(typeof stopNearWatch==='function')stopNearWatch();       /* أطفئ المتابعة مع البنر */
-  }else if(p.near){
-    if(na&&typeof checkNearby==='function')checkNearby();
-    if(typeof startNearWatch==='function')startNearWatch();     /* وأعِدها معه */
+  /* تنبيه المرور: متابعة الموقع تبدأ وتتوقف مع مفتاحه.
+     ما عاد بالصفحة شيء يُخفى — المربع يبني نفسه عند الحاجة. */
+  if(!p.near){
+    if(typeof stopNearWatch==='function')stopNearWatch();
+    if(typeof closeNearPop==='function')closeNearPop();   /* أغلق مربعاً مفتوحاً */
+  }else{
+    if(typeof startNearWatch==='function')startNearWatch();
   }
-  /* قسم «الأقرب إليك» — renderNearby تحترم التفضيل بنفسها
-     وتقرّر الظهور والإخفاء، فنكتفي بندائها في الحالتين. */
-  if(typeof renderNearby==='function')renderNearby();
   const hero=document.getElementById('homeHero');
   const wt=document.getElementById('weatherTip');
   const ch=document.getElementById('challengeStrip');
@@ -280,8 +278,6 @@ export function initViewPrefs(){
   const p=getViewPrefs();
   const n=document.getElementById('swNear');
   if(n)n.checked=p.near;
-  const nb=document.getElementById('swNearby');
-  if(nb)nb.checked=p.nearby;
   const a=document.getElementById('swHero'),b=document.getElementById('swWeather'),c=document.getElementById('swChallenge');
   if(a)a.checked=p.hero;
   if(b)b.checked=p.weather;

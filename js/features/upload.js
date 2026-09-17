@@ -214,6 +214,54 @@ export async function pickVideo(inp){
 
 /* ضغط الصورة قبل الرفع (أقصى عرض 1600px) */
 
+
+/* ═══ مشترك بين مسار الصورة ومسار الفيديو ═══
+   كانت هذه الكتل مكرّرة حرفياً بالمسارين داخل addPhoto، فأي تعديل
+   على أحدهما ينسى الآخر — وهو نفس نوع الخلل الذي فرّق بين فلترة
+   الشبكة وفلترة الخريطة. مصدر واحد يمنع تكراره. */
+
+function mediaRow(title, region, city, country, extra){
+  return Object.assign({
+    user_id: currentUser()?.id, title, region, city,
+    category: $('aCat').value || 'other',
+    abroad: state.isAbroad, country,
+    village: state.isAbroad ? '' : $('aVillage').value.trim(),
+    lat: state.pendingGeo?.lat ?? null,
+    lng: state.pendingGeo?.lng ?? null,
+    visibility: state.pendingVis,
+    commercial: !!($('aComm') && $('aComm').checked),
+    tags: (state.pickedTags || []),
+    exif: ((document.getElementById('techShow') && document.getElementById('techShow').checked && state.exifTech) ? state.exifTech : {})
+  }, extra);
+}
+
+function resetAddForm(){
+  $('aTitle').value=''; $('aVillage').value='';
+  if($('aDesc')){ $('aDesc').value=''; descCount(); }
+  if($('aComm')) $('aComm').checked = false;
+  resetTranslation();
+  state.pickedTags = []; renderTagRow();
+  if(typeof hideSuggestions === 'function') hideSuggestions();
+  state.earlyRes = null; state.exifTech = null; renderTechCard();
+}
+
+async function myDisplayName(){
+  try{
+    return (await sb.from('profiles').select('display_name')
+      .eq('id', currentUser()?.id).maybeSingle()).data?.display_name || 'مصوّر';
+  }catch(e){ return 'مصوّر'; }
+}
+
+async function afterPublish(msg, sortMode){
+  if(typeof logRate === 'function') logRate('photo');
+  toast(msg);
+  try{ state.sort = sortMode; state.draftSort = sortMode; }catch(e){}
+  if(typeof maybeAskNotifs === 'function') maybeAskNotifs();
+  setTimeout(function(){ if(typeof checkRaceProgress === 'function') checkRaceProgress(); }, 3000);
+  await loadPhotos();
+  go('feed');
+}
+
 export async function addPhoto(){
   if(isAnon()){toast('سجّل أول عشان تنشر 📸');openAcc();return}
   const title=$('aTitle').value.trim();
@@ -248,20 +296,19 @@ export async function addPhoto(){
       const vpath=`${currentUser()?.id}/${Date.now()}.mp4`;
       const upv=await sb.storage.from('videos').upload(vpath,state.pendingVideo,{contentType:state.pendingVideo.type||'video/mp4',cacheControl:'31536000'});
       if(upv.error)throw upv.error;
-      const insv=await sb.from('photos').insert({
-        user_id:currentUser()?.id,title,region,city,category:$('aCat').value||'other',
-        abroad:state.isAbroad,country,
-        village:state.isAbroad?'':$('aVillage').value.trim(),
-        lat:state.pendingGeo?.lat??null,lng:state.pendingGeo?.lng??null,
-        image_path:vpath,media_type:'video',filter_key:state.curFilter,music_key:(state.pendingMusicName||''),visibility:state.pendingVis,description:'',commercial:!!($('aComm')&&$('aComm').checked),tags:(state.pickedTags||[]),exif:((document.getElementById('techShow')&&document.getElementById('techShow').checked&&state.exifTech)?state.exifTech:{})
-      });
+      const insv=await sb.from('photos').insert(mediaRow(title, region, city, country, {
+        image_path: vpath, media_type: 'video',
+        filter_key: state.curFilter,
+        music_key: (state.pendingMusicName || ''),
+        description: ''
+      }));
       if(insv.error){
         await sb.storage.from('videos').remove([vpath]).catch(()=>{});
         throw insv.error;
       }
       if(state.pendingVis==='public'){
         try{
-          const nm2=(await sb.from('profiles').select('display_name').eq('id',currentUser()?.id).maybeSingle()).data?.display_name||'مصوّر';
+          const nm2=await myDisplayName();
           pushNotify({
             title:'🎬 مقطع جديد في الأضواء',
             body:title+' — عدسة '+nm2,
@@ -273,13 +320,8 @@ export async function addPhoto(){
       state.pendingVideo=null;resetFilter();state.pendingVis='public';setVis('public');const _c1=$('clearDraft');if(_c1)_c1.style.display='none';
       const pv=$('videoPreview');if(pv){pv.src='';pv.style.display='none';}
       $('drop').style.display='none';$('geoCard').style.display='none';
-      $('aTitle').value='';$('aVillage').value='';if($('aDesc')){$('aDesc').value='';descCount();}if($('aComm'))$('aComm').checked=false;resetTranslation();state.pickedTags=[];renderTagRow();if(typeof hideSuggestions==='function')hideSuggestions();state.earlyRes=null;state.exifTech=null;renderTechCard();
-      if(typeof logRate==='function')logRate('photo');
-      toast('انرفع الفيديو 🎬');
-      try{state.sort='new';state.draftSort='new';}catch(e){}
-      if(typeof maybeAskNotifs==='function')maybeAskNotifs();
-    setTimeout(function(){if(typeof checkRaceProgress==='function')checkRaceProgress()},3000);
-    await loadPhotos();go('feed');
+      resetAddForm();
+      await afterPublish('انرفع الفيديو 🎬', 'new');
       btn.disabled=false;btn.textContent=(state.pendingVideo?'انشر المقطع 🎬':'انشر الصورة 🚀');
       return;
     }
@@ -297,13 +339,12 @@ export async function addPhoto(){
       sb.storage.from('photos').upload(thumbPath(path),thumb,{contentType:'image/jpeg',cacheControl:'31536000'})
     ]);
     if(up.error)throw up.error;
-    const ins=await sb.from('photos').insert({
-      user_id:currentUser()?.id,title,region,city,category:$('aCat').value||'other',
-      abroad:state.isAbroad,country,
-      village:state.isAbroad?'':$('aVillage').value.trim(),
-      lat:state.pendingGeo?.lat??null,lng:state.pendingGeo?.lng??null,
-      image_path:path,visibility:state.pendingVis,description:($('aDesc')?$('aDesc').value.trim():''),commercial:!!($('aComm')&&$('aComm').checked),title_en:state.trTitle,description_en:state.trDesc,tags:(state.pickedTags||[]),exif:((document.getElementById('techShow')&&document.getElementById('techShow').checked&&state.exifTech)?state.exifTech:{})
-    }).select('id').maybeSingle();
+    const ins=await sb.from('photos').insert(mediaRow(title, region, city, country, {
+      image_path: path,
+      description: ($('aDesc') ? $('aDesc').value.trim() : ''),
+      title_en: state.trTitle,
+      description_en: state.trDesc
+    })).select('id').maybeSingle();
     if(ins.error){
       // فشل التسجيل — ننظف ملفات الصورة من المخزن حتى لا تبقى يتيمة
       await sb.storage.from('photos').remove([path,thumbPath(path)]).catch(()=>{});
@@ -325,7 +366,7 @@ export async function addPhoto(){
     // إشعار للجميع عند نشر صورة عامة
     if(state.pendingVis==='public'){
       try{
-        const nm=(await sb.from('profiles').select('display_name').eq('id',currentUser()?.id).maybeSingle()).data?.display_name||'مصوّر';
+        const nm=await myDisplayName();
         pushNotify({
           title:'📸 صورة جديدة من '+(city||region),
           body:title+' — عدسة '+nm,
@@ -336,15 +377,13 @@ export async function addPhoto(){
     }
     state.pendingFile=null;state.pendingGeo=null;state.pendingBlob=null;resetFilter();state.pendingVis='public';setVis('public');const _c2=$('clearDraft');if(_c2)_c2.style.display='none';
     $('preview').style.display='none';$('drop').style.display='none';$('geoCard').style.display='none';
-    $('aTitle').value='';$('aVillage').value='';if($('aDesc')){$('aDesc').value='';descCount();}if($('aComm'))$('aComm').checked=false;resetTranslation();state.pickedTags=[];renderTagRow();if(typeof hideSuggestions==='function')hideSuggestions();state.earlyRes=null;state.exifTech=null;renderTechCard();
-    if(typeof logRate==='function')logRate('photo');
-    toast(state.pendingVis==='private'?'انحفظت بخزنتك 🔒':'نُشرت صورتك 🎉');
+    resetAddForm();
     const wasAbroad=state.isAbroad;
     $('aCountry').value='';
-    try{state.sort=wasAbroad?'abroad':'new';state.draftSort=state.sort;}catch(e){}
-    if(typeof maybeAskNotifs==='function')maybeAskNotifs();
-    setTimeout(function(){if(typeof checkRaceProgress==='function')checkRaceProgress()},3000);
-    await loadPhotos();go('feed');
+    await afterPublish(
+      state.pendingVis==='private' ? 'انحفظت بخزنتك 🔒' : 'نُشرت صورتك 🎉',
+      wasAbroad ? 'abroad' : 'new'
+    );
   }catch(e){
     if(e.message&&e.message.includes('row-level')){
       // نسأل القاعدة عن السبب الحقيقي

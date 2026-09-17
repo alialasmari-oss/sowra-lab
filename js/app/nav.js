@@ -296,12 +296,18 @@ export async function boot(){
   if(location.search.indexOf('admin=1') > -1){
     try{
       await authP;
-      /* الرابط الصريح يفتح اللوحة حتى لو تعذّر التحقق (خلل اتصال مثلاً).
-         الصلاحيات الحقيقية محمية بقواعد RLS بالخادم. */
-      if(!state.isAdmin) state.isAdmin = true;
-      const g = $('admGear');
-      if(g) g.style.display = 'block';
-      await enterAdmin();
+      /* ⚠️ لا نمنح الصفة للرابط. سابقاً كان هنا:
+             if(!state.isAdmin) state.isAdmin = true;
+         أي أن أي زائر يفتح ?admin=1 تنفتح له اللوحة. checkAdmin وحدها
+         تقرّر، والرابط لا يعدو كونه اختصاراً لفتح اللوحة لمن يملكها. */
+      if(state.isAdmin){
+        const g = $('admGear');
+        if(g) g.style.display = 'block';
+        await enterAdmin();
+      }else{
+        console.warn('[adm] الرابط استُعمل بحساب غير مشرف — لم تُفتح اللوحة');
+        toast('هذا الرابط للمشرفين فقط', true);
+      }
     }catch(e){
       console.error('[boot] تعذر فتح اللوحة برابط الطوارئ', e);
     }

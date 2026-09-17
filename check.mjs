@@ -80,7 +80,7 @@ const total = sizes.reduce((a,[,n]) => a+n, 0);
 const big = sizes.filter(([,n]) => n > 400);
 
 /* ═══ ٥) onclick بالـHTML ═══ */
-let htmlMissing = [];
+let htmlMissing = [], htmlGlobals = [];
 try{
   const html = fs.readFileSync('./index.html','utf8');
   const needed = new Set();
@@ -88,6 +88,15 @@ try{
     for(const c of m[1].matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)) needed.add(c[1]);
   const SKIP = ['event','this','getElementById','click','focus','blur','preventDefault','stopPropagation','if'];
   htmlMissing = [...needed].filter(n => !exports[n] && !SKIP.includes(n));
+
+  /* متغيرات ما قبل الوحدات داخل onclick بالـHTML —
+     مثل openProfile(USER.id): تُرمى ReferenceError عند الضغط فقط،
+     فلا يكشفها فحص ملفات js وحده. */
+  const OLD = /(?<![.\w$'"])(?:GEO|VILL|USER|IS_ADMIN|ADM_ROLE|VISIT_COUNTS|CLAIM_MAP)\b/;
+  for(const m of html.matchAll(/on\w+\s*=\s*"([^"]*)"/g)){
+    const hit = m[1].match(OLD);
+    if(hit) htmlGlobals.push(`${hit[0]} في: ${m[1].slice(0,52)}`);
+  }
 }catch(e){}
 
 /* ═══ التقرير ═══ */
@@ -122,6 +131,9 @@ if(htmlMissing.length){
   if(adm.length) console.log(`       ${warn('⏳')} مؤجّلة للإشراف (${adm.length}): ${adm.slice(0,6).join(', ')}`);
   if(real.length){ fails++; console.log(`       ${bad('❌')} مفقودة: ${real.join(', ')}`); }
 }
+
+line(!htmlGlobals.length, 'متغير قديم بالـHTML', htmlGlobals.length || '');
+if(htmlGlobals.length){ fails++; htmlGlobals.forEach(h => console.log(`       ${h}`)); }
 
 console.log(`  ${big.length ? warn('⚠️') : ok('✅')} فوق ٤٠٠ سطر${' '.repeat(10)} ${big.length || ''}`);
 big.forEach(([f,n]) => console.log(`       ${f} — ${n}`));

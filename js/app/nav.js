@@ -90,6 +90,22 @@ export function go(p){
   window.scrollTo(0,0);
 }
 
+/* ═══ الدخول للوحة الإشراف ═══
+   لا تستخدم go('adm') مباشرة: لوحة الإشراف وحدة كسولة لا تُحمَّل إلا
+   عبر openAdmin المنشور بالجسر (main.js). فـgo('adm') وحدها تعرض
+   اللوحة بلا دوالها — تظهر الأزرار ولا يعمل أي منها. */
+async function enterAdmin(){
+  try{
+    if(typeof window.openAdmin === 'function'){
+      await window.openAdmin();
+      return;
+    }
+  }catch(e){ console.warn('[adm] تعذر تحميل اللوحة', e); }
+  /* احتياطي أخير */
+  go('adm');
+  if(typeof loadReports==='function')loadReports();
+}
+
 /* ============ البداية ============ */
 
 (async()=>{
@@ -107,13 +123,12 @@ export function go(p){
       const explicit = location.search.indexOf('admin=1')>-1;
       try{sessionStorage.setItem('open_admin','1')}catch(e){}
 
-      const openAdm = () => {
+      const openAdm = async () => {
         try{
           const g=document.getElementById('admGear');
           if(g)g.style.display='block';
-          go('adm');
+          await enterAdmin();
           try{sessionStorage.removeItem('open_admin')}catch(e){}
-          if(typeof loadReports==='function')loadReports();
         }catch(e){}
       };
 
@@ -147,9 +162,8 @@ export function go(p){
       if(sessionStorage.getItem('post_login')==='1'){
         sessionStorage.removeItem('post_login');
         if(state.isAdmin){
-          go('adm');
+          await enterAdmin();
           try{sessionStorage.removeItem('open_admin')}catch(e){}
-          if(typeof loadReports==='function')loadReports();
         }
       }
     }catch(e){}
@@ -283,9 +297,8 @@ export async function handleAuthReturn(){
          لا تعمل إلا عند العودة من تسجيل دخول فعلي. */
       if(state.isAdmin){
         try{
-          go('adm');
+          await enterAdmin();
           try{sessionStorage.removeItem('open_admin')}catch(e){}
-          if(typeof loadReports==='function')loadReports();
         }catch(e){}
       }
     }

@@ -234,6 +234,11 @@ export async function loadMyMsgs(){
 
 export async function signInWithGoogle(){
   try{
+    /* علامة «عائد من تسجيل دخول خارجي».
+       لا نعتمد على الرابط: مكتبة Supabase تلتقط ?code= وتمسحه من العنوان
+       تلقائياً (detectSessionInUrl) قبل أن يقرأه كودنا، فتضيع الإشارة.
+       sessionStorage يعبر رحلة جوجل لأنه نفس التبويب ونفس الأصل. */
+    try{sessionStorage.setItem('post_login','1')}catch(e){}
     const{error}=await sb.auth.signInWithOAuth({
       provider:'google',
       options:{redirectTo:window.location.origin}

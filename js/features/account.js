@@ -239,9 +239,14 @@ export async function signInWithGoogle(){
        تلقائياً (detectSessionInUrl) قبل أن يقرأه كودنا، فتضيع الإشارة.
        sessionStorage يعبر رحلة جوجل لأنه نفس التبويب ونفس الأصل. */
     try{sessionStorage.setItem('post_login','1')}catch(e){}
+    /* origin وحده يسقط المسار: بـsowra-lab يصير
+       https://alialasmari-oss.github.io بدل .../sowra-lab/ — ولأنه غير
+       مُدرج بقائمة Redirect URLs يتجاهله Supabase ويرجع لـSite URL
+       (sowra.app)، فينتهي المستخدم بموقع آخر كلياً.
+       إضافة pathname تُبقينا بنفس النشر — وعلى sowra.app النتيجة ذاتها. */
     const{error}=await sb.auth.signInWithOAuth({
       provider:'google',
-      options:{redirectTo:window.location.origin}
+      options:{redirectTo:window.location.origin+window.location.pathname}
     });
     if(error)toast('تعذر الدخول بـGoogle: '+error.message,true);
   }catch(e){toast('تعذر الدخول بـGoogle',true)}

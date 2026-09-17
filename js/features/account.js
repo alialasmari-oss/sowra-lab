@@ -162,8 +162,13 @@ export async function accSubmit(){
     }else{
       const { data, error } = await sb.auth.signInWithPassword({email,password:pass});
       if(error)throw error;
-      const { data:{ session } } = await sb.auth.getSession();
-      session.user = (session&&session.user)||(data&&data.user);
+      /* ⚠️ كان هنا:  const { data:{ session } } = ...
+         الاسم session يحجب الكائن المشترك المستورد من core/db.js،
+         فتُكتب الجلسة على المتغير المحلي ويبقى المشترك على المستخدم
+         المجهول — فيرى checkAdmin مستخدماً مجهولاً ولا يظهر الترس.
+         نسمّي المحلي s حتى يصل التحديث للكائن المشترك فعلاً. */
+      const { data:{ session: s } } = await sb.auth.getSession();
+      session.user = (s&&s.user)||(data&&data.user);
       if(!currentUser())throw new Error('تعذر قراءة الجلسة');
     }
 

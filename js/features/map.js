@@ -22,7 +22,6 @@ const openSheet = need('openSheet');
 const render = need('render');
 /* فلترة الصور — مصدر واحد مشترك مع الشبكة (features/feed.js) */
 const filteredPhotos = need('filteredPhotos');
-const renderNearby = need('renderNearby');
 
 /* state.map → state.map */
 export function renderMap(){
@@ -118,18 +117,13 @@ export function setView(v){
   $('vtMap').classList.toggle('on',v==='map');
   const feed=$('feed');
   const map=$('mapWrap');
-  const nearby=$('nearbyWrap');
   if(v==='map'){
     if(feed)feed.style.display='none';
-    if(nearby)nearby.style.display='none';
     if(map)map.style.display='block';
     renderMap();
   } else {
     if(map)map.style.display='none';
     if(feed)feed.style.display='';
-    /* متماثل مع الإخفاء أعلاه — renderNearby تقرّر بنفسها
-       أتظهر أم لا حسب الموقع والصور القريبة. */
-    if(typeof renderNearby==='function')renderNearby();
     render();
   }
 }

@@ -163,78 +163,42 @@ export async function loadWeatherTip(){
 }
 /* ====== الزيارات الميدانية ====== */
 
-/* «📍 الأقرب إليك» — جهة واحدة تقرّر ظهوره
-   كان الرسم محشوراً داخل نداء تحديد الموقع، وكان setView يخفيه عند
-   فتح الخريطة ولا يعيده عند الرجوع للشبكة — فيختفي القسم من أول ضغطة
-   على زر الخريطة ولا يرجع إلا بتحديث الصفحة وإذن موقع جديد.
-   الآن الدالة تقرأ الموقع المحفوظ وتقرّر بنفسها: تظهر إن كان هناك ما
-   يُعرض، وتخفي إن لم يكن — ويناديها كلٌّ من تحديد الموقع وsetView. */
+/* ═══ طلب الموقع عند الحاجة ═══
+   أي قسم يعتمد على الموقع ووجد نفسه بلا موقع، يناديها بدل أن يستسلم.
+   محميّة من التكرار: طلب واحد معلّق، ومهلة بين محاولة وأخرى، حتى لا
+   تتحوّل إلى قصف للمتصفح لو نُوديت من عدة أماكن. */
+let _posPending=false, _posLastTry=0;
 
-/* أقصى مسافة تُعدّ «قريبة» — بطلب المالك: قريبة فعلاً لا مجازاً.
-   العنوان على الشاشة يُكتب من هذا الرقم نفسه، فلا يفترقان أبداً.
-   غيّر الرقم وحده إن أردت توسيعه أو تضييقه. */
-const NEAR_KM = 300;
+export function ensurePos(force){
+  if(_posPending)return;
+  if(!navigator.geolocation)return;
+  const now=Date.now();
+  /* المهلة تكبح النداءات التلقائية فقط. أما force فمعناه أن المستخدم
+     نفسه ضغط مفتاحاً الآن — ولا يجوز أن نردّ طلبه لأن محاولة فاشلة
+     سبقته قبل ثوانٍ. هنا كمن العطل بأول إصلاح كتبته. */
+  if(!force && now-_posLastTry < 10000)return;
+  _posLastTry=now; _posPending=true;
 
-export function renderNearby(){
-  const wrap=$('nearbyWrap'), box=$('nearbyFeed');
-  if(!wrap||!box)return;
-
-  /* مفتاحه الخاص بالفلتر — غير مفتاح البنر الأخضر */
-  try{
-    if(typeof getViewPrefs==='function' && getViewPrefs().nearby===false){
-      wrap.style.display='none'; return;
-    }
-  }catch(e){}
-
-  const lat=window.__USER_LAT, lng=window.__USER_LNG;
-  if(!lat||!lng){wrap.style.display='none';return}
-
-  const distKm=(p)=>Math.hypot(((p.lat||0)-lat)*111,(((p.lng||0)-lng)*111*Math.cos(lat*Math.PI/180)));
-  const all=(state.photos||[])
-    .filter(p=>p.lat&&p.lng&&!p.abroad&&p.visibility!=='private'&&p.media_type!=='video'&&distKm(p)<=NEAR_KM)
-    .sort((a,b)=>distKm(a)-distKm(b));
-  const near=all.slice(0,4);   /* أربع على الأكثر — الشبكة تتسع وتضيق حسب العدد */
-
-  if(!near.length){wrap.style.display='none';return}
-
-  wrap.style.display='block';
-  /* العنوان يذكر المدى صراحةً ليفرّقه الزائر عن البنر الأخضر،
-     ومصدره NEAR_KM نفسه فلا يتخلّف عنه لو غيّرناه.
-     ويذكر العدد الكامل حين يتجاوز الأربع، فلا تختفي البقية بصمت. */
-  const ttl=wrap.querySelector('.nearby-title');
-  if(ttl){
-    const ar=n=>String(n).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
-    ttl.innerHTML='📍 الأقرب إليك · ضمن '+ar(NEAR_KM)+' كم'
-      + (all.length>near.length
-          ? ' <span style="font-weight:400;color:var(--txt-dim)">('+ar(near.length)+' من '+ar(all.length)+')</span>'
-            + ' <button onclick="setView(\'map\')" style="background:none;border:none;color:var(--sadu);'
-            + 'font-family:\'Tajawal\';font-size:12.5px;font-weight:700;cursor:pointer;padding:0 4px">شوف الكل على الخريطة ←</button>'
-          : '');
-  }
-  box.innerHTML=near.map(p=>{
-    const d=distKm(p);
-    const dt=d<1?(Math.round(d*1000)+' م'):(d<10?d.toFixed(1)+' كم':Math.round(d)+' كم');
-    return `
-      <div class="card" onclick="openSheet(${p.id})">
-        <div class="ph"><img src="${thumbUrl(p.image_path)}" onerror="this.onerror=null;this.src='${imgUrl(p.image_path)}'" loading="lazy" alt="${esc(p.title)}">
-          <div class="loc-chip">📍 ${esc(p.village||p.city)}</div>
-        </div>
-        <div class="card-body">
-          <div class="card-title">${esc(p.title)}</div>
-          <div class="card-meta"><span>⭐ ${Number(p.avg_stars).toFixed(1)}</span><span>📍 ${dt}</span></div>
-        </div>
-      </div>`;
-  }).join('');
+  navigator.geolocation.getCurrentPosition(pos=>{
+    _posPending=false;
+    window.__USER_LAT=pos.coords.latitude;
+    window.__USER_LNG=pos.coords.longitude;
+    try{ maybePopNear(); }catch(e){}
+  }, err=>{
+    _posPending=false;
+    console.warn('[near] تعذّر تحديد الموقع — code '+err.code+' · '+err.message);
+  }, { enableHighAccuracy:false, maximumAge:60000, timeout:15000 });
 }
 
 /* ═══════════════════════════════════════════════════════
    تنبيه المرور — مربع منبثق يظهر حين تقترب من مكان صورة
-   البنر الأخضر يُرسم عند فتح الصفحة فقط، فمن يمشي بعدها لا
-   يراه. هنا نتابع الموقع باستمرار، وأول ما تدخل مدى صورة
-   لم تُنبَّه عليها بهذه الجلسة، يقفز المربع مرة واحدة.
+   هذا هو سطح القرب الوحيد بالتطبيق. حُذف قبله البنر الأخضر
+   وقسم بطاقات «الأقرب إليك» لأن ثلاثتها كانت تقول الشيء نفسه.
+   نتابع الموقع دورياً، وأول ما تدخل مدى صورة لم تُنبَّه عليها
+   بهذه الجلسة، يقفز المربع مرة واحدة.
    ═══════════════════════════════════════════════════════ */
 
-const POP_KM = 100;            /* نفس مدى البنر الأخضر */
+const POP_KM = 2;            /* نفس مدى البنر الأخضر */
 let _watchId = null;
 
 /* الصور التي نُبِّه عليها بهذه الجلسة — حتى لا يتكرر المربع
@@ -266,6 +230,7 @@ function nearPopEnsure(){
   #nearPop .np-ttl{font-family:'Reem Kufi',sans-serif;font-size:18px;color:var(--txt);margin-bottom:4px}
   #nearPop .np-sub{font-size:12.5px;color:var(--txt-dim);line-height:1.9}
   #nearPop .np-btns{display:flex;gap:8px;margin-top:16px}
+  #nearPop .np-hint{font-size:11px;color:var(--txt-dim);margin-top:11px;opacity:.85}
   #nearPop .np-btn{flex:1;padding:12px;border-radius:13px;border:1px solid var(--line);
     background:var(--card2);color:var(--txt);font-family:'Tajawal';font-size:14px;font-weight:700;cursor:pointer}
   #nearPop .np-btn.main{background:var(--palm);border-color:var(--palm);color:#fff}
@@ -276,7 +241,9 @@ function nearPopEnsure(){
   el.id='nearPop';
   el.innerHTML='<div class="np-card"><img class="np-img" alt=""><div class="np-bd">'
              + '<div class="np-kick"></div><div class="np-ttl"></div><div class="np-sub"></div>'
-             + '<div class="np-btns"></div></div></div>';
+             + '<div class="np-btns"></div>'
+             + '<div class="np-hint">تقدر تطفي هذا التنبيه من «فلتر ← ما يظهر بالرئيسية»</div>'
+             + '</div></div>';
   el.addEventListener('click', ev=>{ if(ev.target===el) closeNearPop(); });
   document.body.appendChild(el);
 }
@@ -372,7 +339,6 @@ function readPosOnce(){
   navigator.geolocation.getCurrentPosition(pos=>{
     window.__USER_LAT=pos.coords.latitude;
     window.__USER_LNG=pos.coords.longitude;
-    try{ renderNearby(); }catch(e){}
     try{ maybePopNear(); }catch(e){}
   }, err=>{
     /* كان الردّ فارغاً ()=>{} فيفشل تحديد الموقع بصمت تام
@@ -406,81 +372,17 @@ export function showNearby(){
     loadWeatherTip();
     if(typeof loadSunTimes==='function'&&window.__USER_LAT)loadSunTimes(window.__USER_LAT,window.__USER_LNG);
     if(typeof renderNewsBanner==='function')renderNewsBanner();
-    if(typeof checkNearby==='function')setTimeout(checkNearby,600);
     if(typeof renderHomeHero==='function')renderHomeHero();
-    renderNearby();
-  },()=>{},{timeout:5000});
+    try{ maybePopNear(); }catch(e){}
+  }, err=>{
+    /* مهلة ٥ ثوانٍ كانت ضيّقة: أجهزة كثيرة تحدّد موقعها بالشبكة فتتجاوزها،
+       فيفشل الإقلاع بصمت ويبقى التطبيق بلا موقع. الآن ١٥ ثانية، والفشل
+       يُكتب، وensurePos تتولّى المحاولة التالية عند الحاجة. */
+    console.warn('[near] تعذّر تحديد الموقع عند الإقلاع — code '+err.code+' · '+err.message);
+  }, { enableHighAccuracy:false, maximumAge:60000, timeout:15000 });
 }
 
 /* ====== البنر الترحيبي مرة وحدة ====== */
-
-export async function checkNearby(){
-  const el=$('nearAlert');if(!el)return;
-  try{
-    if(!window.__USER_LAT){el.style.display='none';return}
-    // مخفي هذي الجلسة؟
-    if(sessionStorage.getItem('near_hidden')==='1'){el.style.display='none';return}
-    if(typeof getViewPrefs==='function'&&!getViewPrefs().near){el.style.display='none';return}
-
-    const lat=window.__USER_LAT, lng=window.__USER_LNG;
-    const dist=p=>Math.hypot((p.lat-lat)*111000,(p.lng-lng)*111000*Math.cos(lat*Math.PI/180));
-
-    // صور ضمن ٢ كم، ليست لي، وما زرتها
-    let near=state.photos.filter(p=>
-      p.lat&&p.lng&&!p.abroad&&p.media_type!=='video'&&
-      (!currentUser()||p.user_id!==currentUser()?.id)&&
-      dist(p)<=2000
-    );
-    if(!near.length){el.style.display='none';return}
-
-    // استبعاد ما زرته أو قيّمته
-    if(currentUser()&&!isAnon()){
-      try{
-        const ids=near.map(p=>p.id);
-        const [v,r]=await Promise.all([
-          sb.from('visits').select('photo_id').eq('user_id',currentUser()?.id).in('photo_id',ids),
-          sb.from('ratings').select('photo_id').eq('user_id',currentUser()?.id).in('photo_id',ids)
-        ]);
-        const done=new Set([...(v.data||[]),...(r.data||[])].map(x=>x.photo_id));
-        near=near.filter(p=>!done.has(p.id));
-      }catch(e){}
-    }
-    if(!near.length){el.style.display='none';return}
-
-    near.sort((a,b)=>dist(a)-dist(b));
-    const top=near.slice(0,6);
-    const closest=Math.round(dist(top[0]));
-    const canVisit=closest<=500;
-
-    el.style.display='block';
-    el.innerHTML=`
-      <div class="na-head">
-        <span style="font-size:20px">📍</span>
-        <b>أنت قرب ${near.length} ${near.length===1?'صورة':near.length<11?'صور':'صورة'}</b>
-        <button class="na-close" onclick="hideNearby()">✕</button>
-      </div>
-      <div class="na-list">
-        ${top.map(p=>{
-          const d=Math.round(dist(p));
-          const dt=d<1000?(d+' م'):((d/1000).toFixed(1)+' كم');
-          return `<div class="na-item" onclick="openSheet(${p.id})">
-            <img class="na-thumb" src="${thumbUrl(p.image_path)}" onerror="this.onerror=null;this.src='${imgUrl(p.image_path)}'" loading="lazy" alt="">
-            <div class="na-name">${esc(p.village||p.city)}</div>
-            <div class="na-dist">${dt}</div>
-          </div>`;
-        }).join('')}
-      </div>
-      <div class="na-cta">${canVisit
-        ? '👣 أقربها على بعد '+closest+' م — تقدر توثّق زيارتك وتقيّمها'
-        : '⭐ افتحها وقيّمها — أو اقترب لتوثيق زيارتك'}</div>`;
-  }catch(e){el.style.display='none'}
-}
-
-export function hideNearby(){
-  try{sessionStorage.setItem('near_hidden','1')}catch(e){}
-  const el=$('nearAlert');
-  if(el)el.style.display='none';
-}
 
 /* ====== منع تسرب التمرير من صندوق الفلتر ====== */
 

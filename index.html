@@ -7,12 +7,18 @@
 /* حارس الصيانة — يعمل قبل رسم الصفحة */
 (function(){
   var U="https://gquzjaxpqeggknhipmzk.supabase.co", K="sb_publishable_BNp6Fg3VLXa1Pf4V6QjncQ_f496PquX";
-    /* عودة من تسجيل دخول خارجي (جوجل) — لا تخطفها الستارة.
-     الرابط يعود بـ?code= بلا ?admin=1، فكان الحارس يحوّله لصفحة الصيانة
-     قبل أن تُكمل Supabase تبادل الرمز، فيتعذّر الدخول بجوجل أثناء الصيانة. */
+  /* عودة من تسجيل دخول خارجي (جوجل) — لا تخطفها الستارة.
+     الإعفاء مشروط بعلامة وُضعت بهذا المتصفح قبل المغادرة، فلا يكفي
+     أن يكتب أحدهم ?code= بالرابط ليتجاوز الستارة. */
   try{
-    if(location.search.indexOf("code=")>-1 || location.hash.indexOf("access_token")>-1) return;
+    var authBack = location.search.indexOf("code=")>-1
+                || location.hash.indexOf("access_token")>-1;
+    if(authBack && sessionStorage.getItem("oauth_pending")==="1"){
+      sessionStorage.removeItem("oauth_pending");
+      return;
+    }
   }catch(e){}
+
   var isAdm=false;
   try{ isAdm=localStorage.getItem("sowra_admin")==="1"; }catch(e){}
   /* مفتاح احتياطي: sowra.app/?admin=1 — يتجاوز الستارة ويثبّت الصلاحية */

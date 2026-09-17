@@ -274,16 +274,16 @@ export async function reportDm(id){
         +'نص الرسالة:\n«'+(inf.body||'')+'»'
     });
     toast('✅ وصل بلاغك — تشوف رد الإدارة بـ«رسائلي»');
-    // إشعار للإدارة
+    /* إشعار للإدارة — to:'admins'
+       الوظيفة smart-service تجلب المشرفين بنفسها بمفتاح الخدمة،
+       فلم يعد المتصفح يحتاج قراءة جدول admins (كان مكشوفاً للجميع). */
     try{
-      const adm=await sb.from('admins').select('id');
-      const ids=(adm.data||[]).map(x=>x.id);
-      if(ids.length&&typeof pushNotify==='function'){
+      if(typeof pushNotify==='function'){
         pushNotify({
           title:'🚩 بلاغ جديد',
           body:'رسالة خاصة من '+(inf.name||'مصوّر'),
           url:'/',
-          user_ids:ids
+          to:'admins'
         });
       }
     }catch(e){}

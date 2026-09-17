@@ -291,16 +291,14 @@ export async function replyToAdmin(refId){
     });
     if(error)throw error;
 
-    // إشعار للإدارة
+    /* إشعار للإدارة — to:'admins' (المتصفح لم يعد يقرأ جدول admins) */
     try{
-      const adm=await sb.from('admins').select('id');
-      const ids=(adm.data||[]).map(x=>x.id);
-      if(ids.length&&typeof pushNotify==='function'){
+      if(typeof pushNotify==='function'){
         pushNotify({
           title:'💬 رد من عضو',
           body:body.slice(0,80),
           url:'/',
-          user_ids:ids
+          to:'admins'
         });
       }
     }catch(e){}

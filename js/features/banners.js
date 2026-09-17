@@ -167,6 +167,14 @@ export async function loadWeatherTip(){
    على زر الخريطة ولا يرجع إلا بتحديث الصفحة وإذن موقع جديد.
    الآن الدالة تقرأ الموقع المحفوظ وتقرّر بنفسها: تظهر إن كان هناك ما
    يُعرض، وتخفي إن لم يكن — ويناديها كلٌّ من تحديد الموقع وsetView. */
+
+/* أقصى مسافة تُعدّ «قريبة». كانت ٣٠ كم، وهي ضيّقة على مساحة المملكة:
+   من وسط الرياض لا تلتقط إلا داخل المدينة، فيظهر القسم ببطاقة يتيمة
+   ويبدو معطّلاً. القسم يعرض الأقرب ستّاً على أي حال، والمسافة مكتوبة
+   على كل بطاقة، فالسقف يمنع ظهور صورة بعيدة بوصفها «قريبة» لا أكثر.
+   غيّر الرقم وحده إن أردت توسيعه أو تضييقه. */
+const NEAR_KM = 250;
+
 export function renderNearby(){
   const wrap=$('nearbyWrap'), box=$('nearbyFeed');
   if(!wrap||!box)return;
@@ -175,23 +183,27 @@ export function renderNearby(){
 
   const distKm=(p)=>Math.hypot(((p.lat||0)-lat)*111,(((p.lng||0)-lng)*111*Math.cos(lat*Math.PI/180)));
   const near=(state.photos||[])
-    .filter(p=>p.lat&&p.lng&&!p.abroad&&p.visibility!=='private'&&p.media_type!=='video'&&distKm(p)<=30)
+    .filter(p=>p.lat&&p.lng&&!p.abroad&&p.visibility!=='private'&&p.media_type!=='video'&&distKm(p)<=NEAR_KM)
     .sort((a,b)=>distKm(a)-distKm(b))
     .slice(0,6);
 
   if(!near.length){wrap.style.display='none';return}
 
   wrap.style.display='block';
-  box.innerHTML=near.map(p=>`
+  box.innerHTML=near.map(p=>{
+    const d=distKm(p);
+    const dt=d<1?(Math.round(d*1000)+' م'):(d<10?d.toFixed(1)+' كم':Math.round(d)+' كم');
+    return `
       <div class="card" onclick="openSheet(${p.id})">
         <div class="ph"><img src="${thumbUrl(p.image_path)}" onerror="this.onerror=null;this.src='${imgUrl(p.image_path)}'" loading="lazy" alt="${esc(p.title)}">
           <div class="loc-chip">📍 ${esc(p.village||p.city)}</div>
         </div>
         <div class="card-body">
           <div class="card-title">${esc(p.title)}</div>
-          <div class="card-meta"><span>⭐ ${Number(p.avg_stars).toFixed(1)}</span></div>
+          <div class="card-meta"><span>⭐ ${Number(p.avg_stars).toFixed(1)}</span><span>📍 ${dt}</span></div>
         </div>
-      </div>`).join('');
+      </div>`;
+  }).join('');
 }
 
 export function showNearby(){

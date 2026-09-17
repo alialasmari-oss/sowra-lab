@@ -213,18 +213,8 @@ export async function handleAuthReturn(){
       if(typeof renderAccIn==='function')await renderAccIn();
       toast('حياك الله 🌟');
       await loadPhotos();
-
-      /* ═══ المشرف يعود للوحة الإشراف ═══
-         العودة من تسجيل الدخول تصل بلا ?admin=1 (جوجل لا يعيد الرابط كما هو)،
-         فكان المالك يهبط بالصفحة الرئيسية. نعتمد على صفة الإشراف المتحقَّقة
-         لا على الرابط. لا يمسّ هذا التحديث العادي — handleAuthReturn
-         لا تعمل إلا عند العودة من تسجيل دخول فعلي. */
-      if(state.isAdmin){
-        try{
-          await enterAdmin();
-          try{sessionStorage.removeItem('open_admin')}catch(e){}
-        }catch(e){}
-      }
+      /* الدخول ينتهي بالصفحة الرئيسية — لا توجيه تلقائي للوحة الإشراف.
+         المشرف يفتحها بالترس متى شاء. */
     }
   }catch(e){}
 }
@@ -293,50 +283,27 @@ export async function boot(){
   try{ renderTagRow(); }catch(e){}
   try{ renderFdTags(); }catch(e){}
 
-  /* ═══ نيّة الدخول للوحة الإشراف ═══
-     ثلاثة مصادر: رابط الطوارئ ?admin=1 · نيّة محفوظة · عودة من تسجيل دخول */
-  const explicitAdmin = location.search.indexOf('admin=1') > -1;
-  let wantAdmin = explicitAdmin;
-  try{
-    wantAdmin = wantAdmin
-      || sessionStorage.getItem('open_admin') === '1'
-      || sessionStorage.getItem('post_login') === '1';
-  }catch(e){}
-  if(explicitAdmin){ try{ sessionStorage.setItem('open_admin','1'); }catch(e){} }
-
   const authP = ensureAuth()
     .then(async () => { await checkAdmin(); loadFavs(); })
     .catch(() => {});
 
-  /* لو النيّة موجودة: ننتظر التحقق وندخل اللوحة قبل رسم الخلاصة.
-     وإلا تُرسم الرئيسية ثم تُستبدل باللوحة — وهو الوميض الذي كان يظهر.
-     نخفي صفحة الخلاصة ريثما يُحسم الأمر، بمهلة أمان تعيدها مهما حدث. */
-  if(wantAdmin){
-    /* الإخفاء نفسه يحدث بالـhead قبل أول رسم (class adm-pending).
-       هنا نرفعه فقط متى ما حُسم الأمر. */
-    const reveal = () => document.documentElement.classList.remove('adm-pending');
-    const safety = setTimeout(reveal, 6000);
+  /* ═══ الدخول ينتهي بالصفحة الرئيسية دائماً ═══
+     لا توجيه تلقائي للوحة الإشراف. المشرف يفتحها بالترس متى شاء،
+     والترس يُظهره checkAdmin.
+
+     الاستثناء الوحيد: رابط الطوارئ الصريح ?admin=1 — طلبٌ مقصود
+     من المشرف نفسه، فنستجيب له. */
+  if(location.search.indexOf('admin=1') > -1){
     try{
       await authP;
-      try{ sessionStorage.removeItem('post_login'); }catch(e){}
-
-      /* مخرج الطوارئ: الرابط الصريح يفتح اللوحة حتى لو تعذّر التحقق.
+      /* الرابط الصريح يفتح اللوحة حتى لو تعذّر التحقق (خلل اتصال مثلاً).
          الصلاحيات الحقيقية محمية بقواعد RLS بالخادم. */
-      if(!state.isAdmin && explicitAdmin) state.isAdmin = true;
-
-      if(state.isAdmin){
-        const g = $('admGear');
-        if(g) g.style.display = 'block';
-        await enterAdmin();
-        try{ sessionStorage.removeItem('open_admin'); }catch(e){}
-      }else{
-        try{ sessionStorage.removeItem('open_admin'); }catch(e){}
-      }
+      if(!state.isAdmin) state.isAdmin = true;
+      const g = $('admGear');
+      if(g) g.style.display = 'block';
+      await enterAdmin();
     }catch(e){
-      console.error('[boot] تعذر الدخول للوحة الإشراف', e);
-    }finally{
-      clearTimeout(safety);
-      reveal();
+      console.error('[boot] تعذر فتح اللوحة برابط الطوارئ', e);
     }
   }
 

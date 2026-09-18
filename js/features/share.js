@@ -162,7 +162,7 @@ export async function shareProfile(uid){
       try{await navigator.clipboard.writeText('عدستي في «صورة من بلدي» 📸\nhttps://sowra.app')}catch(e){}
       toast('انحفظت البطاقة — والنص بالحافظة 📋');
     },'image/jpeg',0.92);
-  }catch(e){toast('تعذر التجهيز: '+(e.message||e),true)}
+  }catch(e){ console.error('[مشاركة] تعذّر التجهيز —', e); toast('تعذر التجهيز: '+((e&&e.message)||e),true) }
 }
 
 /* ====== حماية المحتوى: فلتر الكلمات وحد المعدّل ====== */
@@ -312,7 +312,13 @@ export async function shareCard(p){
       toast('انحفظت البطاقة');
     },'image/jpeg',0.92);
 
-  }catch(e){toast('تعذر تجهيز البطاقة',true)}
+  }catch(e){
+    /* كان يبتلع السبب: «تعذر تجهيز البطاقة» بلا كلمةٍ أخرى. وحين
+       تعطّلت البطاقة فعلاً لم أستطع أنا نفسي تشخيصها إلا بعد أن
+       فتحتُ هذا السطر — والمستعمل أعجز. السبب للسجلّ والرسالة له. */
+    console.error('[بطاقة] تعذّر التجهيز —', e);
+    toast('تعذر تجهيز البطاقة — '+((e&&e.message)||'سبب غير معروف'), true);
+  }
 }
 
 /* ====== مناطق قليلة التغطية ====== */

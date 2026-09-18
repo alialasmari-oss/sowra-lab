@@ -1,17 +1,25 @@
 /* صورة من بلدي — features/promo.js
    النشر بالسوشال */
 
-import { imgUrl, thumbUrl } from '../core/media.js';
+import { thumbUrl } from '../core/media.js';
 import { state } from '../core/state.js';
 import { $, toast } from '../core/ui.js';
 import { geo, COORDS, REGION_CENTER, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
+import { need } from '../core/hub.js';
+/* ═══ عبر الحاجز ═══
+   shareCard ← features/share.js
+*/
+const shareCard = need('shareCard');
 
 export let PROMO_ID=null;
 
 export function openPromo(pid){
   if(!state.isAdmin){toast('للمشرف فقط',true);return}
-  const p=state.photos.find(x=>x.id===pid);
-  if(!p)return;
+  /* كانت ترجع بصمت: يضغط المشرف 📢 فلا يحدث شيء ولا يُقال له لماذا.
+     والخلاصة العامة لا تضمّ المخفيّات ولا ما بالخزنة. */
+  const p=state.photos.find(x=>x.id===pid)
+        || (state.admPhotos||[]).find(x=>x.id===pid);
+  if(!p){toast('الصورة غير موجودة بالقائمة الحالية',true);return}
   PROMO_ID=pid;
   const loc=p.abroad?(p.country||p.city):((p.village?p.village+' · ':'')+p.city);
   const txt='📸 '+p.title+'\n📍 '+loc+'\n📷 عدسة '+(p.photographer||'مصوّر')+'\n\nمن «صورة من بلدي» — عدسات أهل الديار 🇸🇦';
@@ -37,24 +45,25 @@ export async function promoCopy(){
   }catch(e){toast('تعذر النسخ',true)}
 }
 
+/* ═══ لماذا صارت بطاقةً بلا نصٍّ ولا رابط ═══
+   كان هذا السطر:
+     navigator.share({files:[f], text:promoText(), url:'https://sowra.app'})
+   ثلاثُ حمولات في نداءٍ واحد: ملفٌ ونصٌّ ورابط. وواتساب وأكثر
+   التطبيقات تفصلها: الصورة رسالةً، والنصُّ والرابط رسالةً أخرى —
+   وهو ما رآه المالك: «يرسلها لوحدها والرابط لوحده».
+   والصورة المرسَلة كانت الأصل عارياً بلا عنوانٍ ولا اسم مصوّر، فلا
+   تدلّ على شيء إن انفصل عنها نصُّها.
+
+   وقد استقرّ رأي المالك قبلُ على أن «الصورة أبلغ من الكلام وبعض
+   الناس لا يفتحون روابط»، فبُنيت shareCard: بطاقةٌ واحدة يُرسَم فيها
+   العنوان والمصوّر والمكان والشعار داخل الصورة نفسها. فلم يبقَ للنصّ
+   المنفصل عملٌ — كلُّ ما يحتاجه المتلقّي في الصورة.
+   فصار الزرّ ينادي البطاقة نفسها: حمولةٌ واحدة، رسالةٌ واحدة. */
 export async function promoDownload(){
   const p=state.photos.find(x=>x.id===PROMO_ID);
-  if(!p)return;
-  toast('⏳ نجهّز الصورة...');
-  try{
-    const r=await fetch(imgUrl(p.image_path));
-    const b=await r.blob();
-    const f=new File([b],'sowra-'+p.id+'.jpg',{type:'image/jpeg'});
-    if(navigator.canShare&&navigator.canShare({files:[f]})){
-      await navigator.share({files:[f],text:promoText(),url:'https://sowra.app'});
-      return;
-    }
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(b);
-    a.download='sowra-'+p.id+'.jpg';
-    a.click();
-    toast('انحفظت الصورة 📥');
-  }catch(e){toast('تعذر التجهيز',true)}
+  if(!p){toast('الصورة غير موجودة',true);return}
+  closePromo();
+  shareCard(p);
 }
 
 export function promoOpen(net){

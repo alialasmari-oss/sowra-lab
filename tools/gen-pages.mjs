@@ -80,7 +80,7 @@ function pageHtml(p, base){
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${esc(title)}</title>
+<title>${esc(title)}</title>${base ? '\n<meta name="robots" content="noindex,nofollow">' : ''}
 <meta name="description" content="${esc(desc)}">
 <link rel="canonical" href="${esc(url)}">
 
@@ -181,14 +181,27 @@ export const eligible = rows => rows.filter(p =>
   p.visibility !== 'private'
 );
 
-/* robots.txt — سطران يقولان للروبوت «تفضّل، وخريطتي هنا» */
-const robotsTxt = base => `User-agent: *\nAllow: /\n\nSitemap: ${SITE}${base}/sitemap.xml\n`;
+/* ═══ إنتاج أم مختبر؟ ═══
+   الإنتاج يخدم من نطاقه الخاص بلا مسار فرعي (BASE فارغ لوجود CNAME).
+   وغيره مختبر: نسخة من نفس المحتوى بنفس الصور — لو فُهرس صار محتوى
+   مكرراً بعنوانين، فيختار قوقل أحدهما وقد يختار المختبر، وتتوزّع
+   الثقة على موقعين. فنمنعه صراحةً، ولا نولّد له خريطة موقع أصلاً.
+
+   ولماذا بـrobots.txt لا بوسم noindex داخل index.html؟ لأن الملفات
+   تُنسخ يدوياً من المختبر للإنتاج، فوسمٌ مكتوب بملف قد يُنسخ معه
+   فيقتل أرشفة الإنتاج بصمت. وrobots.txt يولّده هذا الملف لكل مستودع
+   على حدة ولا تنسخه يد — فلا يمكن أن يتسرّب. */
+const isProd = base => base === '';
+
+const robotsTxt = base => isProd(base)
+  ? `User-agent: *\nAllow: /\n\nSitemap: ${SITE}/sitemap.xml\n`
+  : `# نسخة مختبر — ممنوعة من الأرشفة حتى لا تنافس sowra.app\nUser-agent: *\nDisallow: /\n`;
 
 export function build(rows, base = ''){
   const out = new Map();
   for(const p of rows) out.set(`${OUT}/${p.id}.html`, pageHtml(p, base));
-  out.set('sitemap.xml', sitemapXml(rows, base));
-  out.set('robots.txt',  robotsTxt(base));
+  if(isProd(base)) out.set('sitemap.xml', sitemapXml(rows, base));
+  out.set('robots.txt', robotsTxt(base));
   return out;
 }
 
@@ -215,7 +228,7 @@ async function main(){
     if(f.endsWith('.html') && !live.has(f)){ fs.unlinkSync(path.join(OUT, f)); removed++; }
   }
   for(const [name, html] of files) fs.writeFileSync(name, html, 'utf8');
-  console.log(`كُتبت ${files.size - 2} صفحة + sitemap.xml${removed ? `  ·  حُذفت ${removed} صفحة لصور مزالة` : ''}`);
+  console.log(`[${base ? 'مختبر — ممنوع من الأرشفة' : 'إنتاج'}] كُتبت ${files.size - (base?1:2)} صفحة${base ? '' : ' + sitemap.xml'}${removed ? `  ·  حُذفت ${removed} صفحة لصور مزالة` : ''}`);
 }
 
 if(import.meta.url === `file://${process.argv[1]}`) main().catch(e => { console.error('✖', e.message); process.exit(1); });

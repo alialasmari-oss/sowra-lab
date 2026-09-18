@@ -3,7 +3,7 @@
 
 import { currentUser, sb } from '../core/db.js';
 import { get, need } from '../core/hub.js';
-import { imgUrl } from '../core/media.js';
+import { imgUrl, thumbUrl } from '../core/media.js';
 import { isCurator, isEditor, isOwner, state } from '../core/state.js';
 import { $, dbErr, esc, toast } from '../core/ui.js';
 import { geo, COORDS, REGION_CENTER, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
@@ -161,6 +161,29 @@ export let CW=null;
    الفرق بين get(قيمة) وneed(دالة) بالحاجز. */
 export const getCW = () => CW;
 
+/* ═══ شبكة الترشيح ═══
+   كان الترشيح يجري من تبويب 🗂️: قائمةٌ عمودية، كل صورة بطاقةٌ بعرض
+   الشاشة تحتها ثمانية أزرار — فالمشرف يمرّر طويلاً ولا يرى الصور
+   متجاورةً ليوازن بينها، وهو جوهر العمل: أن تختار خمساً من بين
+   عشرات بنظرةٍ واحدة. فصارت شبكةً مربّعة هنا، حيث تُدار المسابقة،
+   وعلى كل صورة مربّعُ اختيار ينقلب ✓ ويُحفظ فوراً.
+   والمرشَّحة تتقدّم الصفّ ليُرى المختار أولاً. */
+function weekPicker(entries){
+  const on = new Set(entries.map(p => p.id));
+  const pool = state.admPhotos.filter(p => p.image_path);
+  if(!pool.length)
+    return '<div class="empty" style="padding:20px">ما فيه صور — افتح تبويب 🗂️ أول</div>';
+  const sorted = [...pool].sort((a,b) => (on.has(b.id)?1:0) - (on.has(a.id)?1:0));
+  return '<div class="wk-pick">' + sorted.map(p => {
+    const sel = on.has(p.id);
+    return `<div class="wk-cell${sel?' on':''}" data-id="${p.id}" onclick="admWeekPick(${p.id})" title="${esc(p.title)}">
+      <img src="${thumbUrl(p.image_path)}" loading="lazy" alt="${esc(p.title)}">
+      <span class="wk-box">${sel?'✓':''}</span>
+      <span class="wk-t">#${p.id} · ${esc(p.title)}</span>
+    </div>`;
+  }).join('') + '</div>';
+}
+
 export async function loadAdmWeek(){
   $('admWk').innerHTML='<div class="empty">⏳</div>';
   const c=await sb.from('weekly_contest').select('*').order('id',{ascending:false}).limit(1).maybeSingle();
@@ -189,12 +212,9 @@ export async function loadAdmWeek(){
         ${CW?`<button class="btn" style="flex:0 0 auto;background:var(--sadu)" onclick="admWeekDelete()">🗑️</button>`:''}
       </div>
     </div>
-    <div style="font-weight:700;font-size:14px;margin-bottom:8px">اللقطات المرشحة (${entries.length}/5) <span style="font-size:11px;color:var(--txt-dim);font-weight:400">— رشّح من تبويب 🗂️ بزر 🏆</span></div>
-    ${entries.length?entries.map(p=>`
-      <div style="display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 13px;margin-bottom:8px">
-        <div style="flex:1"><b style="font-size:13px">#${p.id} · ${esc(p.title)}</b></div>
-        <button class="btn" style="font-size:12px;padding:7px 12px;background:var(--card2);border:1px solid var(--line);color:var(--txt)" onclick="admWeekRemove(${p.id})">إزالة</button>
-      </div>`).join(''):'<div class="empty" style="padding:20px">ما فيه ترشيحات بعد</div>'}` + admChallengeBlock() + admReelsBlock() + admInspectBlock() + admCommBlock() + admCleanupBlock() + await admSpBlock() + admSponsorsBtn() + admSponsorSideBlock() +  admNewsBlock() + admGoogleLoginBlock() + admMaintBlock() + await admCuratorsBlock() + await admTeamBlock();
+    <div style="font-weight:700;font-size:14px;margin-bottom:4px">اللقطات المرشحة <span id="wkCount">(${entries.length}/5)</span></div>
+    <div style="font-size:11.5px;color:var(--txt-dim);margin-bottom:9px">اضغط الصورة لترشيحها — تنقلب العلامة ✓ وتُحفظ فوراً</div>
+    ${weekPicker(entries)}` + admChallengeBlock() + admReelsBlock() + admInspectBlock() + admCommBlock() + admCleanupBlock() + await admSpBlock() + admSponsorsBtn() + admSponsorSideBlock() +  admNewsBlock() + admGoogleLoginBlock() + admMaintBlock() + await admCuratorsBlock() + await admTeamBlock();
 }
 /* ====== بنر الراعي ====== */
 

@@ -107,8 +107,46 @@ export async function admWeekAdd(pid){
 }
 
 export async function admWeekRemove(pid){
-  await sb.from('weekly_entries').delete().eq('contest_id',_CW_().id).eq('photo_id',pid);
+  if(!_CW_()){toast('ما فيه مسابقة',true);return}
+  const {error}=await sb.from('weekly_entries').delete().eq('contest_id',_CW_().id).eq('photo_id',pid);
+  if(error){dbErr('إزالة الترشيح',error);return}
   toast('أُزيلت');await loadAdmWeek();
+}
+
+/* ═══ مربّع الاختيار بشبكة الترشيح ═══
+   دالةٌ واحدة تضيف وتزيل، والاتجاه تقرؤه من الخليّة نفسها لا من
+   نسخةٍ محفوظة — فلا تفترق حالةُ الشاشة عن حالة القاعدة.
+   ونقلب العلامة قبل الشبكة ثم نرجعها إن تعثّرت، لأن إعادة رسم
+   التبويب كاملاً عند كل نقرة تعني عشر استعلامات وانتظاراً محسوساً،
+   والمشرف ينقر خمس مرات متتابعة. */
+export async function admWeekPick(pid){
+  if(!_CW_()){toast('أنشئ المسابقة أول من أعلى الصفحة',true);return}
+  if(_CW_().ended_at){toast('المسابقة منتهية — أنشئ جديدة',true);return}
+  const cell=document.querySelector('.wk-cell[data-id="'+pid+'"]');
+  if(!cell)return;
+  const box=cell.querySelector('.wk-box');
+  const was=cell.classList.contains('on');
+  if(!was && document.querySelectorAll('.wk-cell.on').length>=5){
+    toast('اكتمل العدد — ٥ لقطات كحد أقصى',true);return;
+  }
+  const paint=v=>{
+    cell.classList.toggle('on',v);
+    if(box)box.textContent=v?'✓':'';
+    const c=$('wkCount');
+    if(c)c.textContent='('+document.querySelectorAll('.wk-cell.on').length+'/5)';
+  };
+  paint(!was);
+  const q=was
+    ? sb.from('weekly_entries').delete().eq('contest_id',_CW_().id).eq('photo_id',pid)
+    : sb.from('weekly_entries').insert({contest_id:_CW_().id,photo_id:pid});
+  const {error}=await q;
+  if(error){
+    if(!was && error.code==='23505'){toast('مرشحة من قبل');return}
+    paint(was);
+    dbErr(was?'إزالة الترشيح':'الترشيح',error);
+    return;
+  }
+  toast(was?'أُزيلت من الترشيحات':'انضافت للترشيحات 🏆');
 }
 
 export async function admWeekEnd(){

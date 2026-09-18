@@ -61,7 +61,12 @@ state.myBadgeSet=new Set();
 window.CLAIM_MAP=window.CLAIM_MAP||{};
 
 export async function openSheet(id){
-  state.curId=id;state.curPhoto=state.photos.find(x=>x.id===id);
+  state.curId=id;
+  /* state.photos هي الخلاصة العامة — لا تضمّ المخفيّات بقرار إشراف.
+     ولوحة الإشراف تعرضها وتحتاج فتحها، فلولا هذا الاحتياط لقال لها
+     «الصورة غير موجودة» وهي بين يديها. */
+  state.curPhoto=state.photos.find(x=>x.id===id)
+              || (state.admPhotos||[]).find(x=>x.id===id);
   /* صورة غير موجودة: كانت الدالة تمضي على undefined فترمي عند أول
      حقل. ويقع هذا واقعاً لا نظرياً — رابط p/<id>.html مفهرس بقوقل
      أو مُرسَل بواتساب لصورة حُذفت بعدها. نخرج بهدوء برسالة. */

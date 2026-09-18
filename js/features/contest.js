@@ -91,7 +91,7 @@ export function renderWeek(){
        والمكان والتقييم والتعليقات. فالزائر يُحكّم بالنظر لا بالمربّع
        الصغير، ثم يرجع فيصوّت. وهي ورقةٌ قائمة أصلاً، لا نبني غيرها. */
     return `<div class="card wcard ${isWin&&results?'winner':''} ${state.myWeekVote===p.id&&!results?'voted':''}">
-      <div class="ph" style="height:170px;cursor:zoom-in" onclick="openSheet(${p.id})" title="اضغط للتكبير والتفاصيل"><img src="${thumbUrl(p.image_path)}" onerror="this.onerror=null;this.src='${imgUrl(p.image_path)}'" alt="${esc(p.title)}">
+      <div class="ph sq" style="cursor:zoom-in" onclick="openSheet(${p.id})" title="اضغط للتكبير والتفاصيل"><img src="${thumbUrl(p.image_path)}" onerror="this.onerror=null;this.src='${imgUrl(p.image_path)}'" alt="${esc(p.title)}">
         ${isWin?'<div class="medal">👑 '+(results?'الفائز':'متصدرة')+'</div>':(results?`<div class="medal">#${i+1}</div>`:'')}
         <span class="w-zoom">🔍 تكبير</span>
       </div>

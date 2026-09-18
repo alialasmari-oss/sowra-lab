@@ -17,6 +17,8 @@ const notifyDmBan = need('notifyDmBan');
 const openProfile = need('openProfile');
 const pushNotify = need('pushNotify');
 const showJoinBox = need('showJoinBox');
+const checkRate = need('checkRate');
+const logRate = need('logRate');
 /* ═══ عبر الحاجز (نُقل للهيدر) ═══
 */
 const isBlockedWith = need('isBlockedWith');
@@ -334,3 +336,33 @@ export async function clearInbox(){
 
 /* ====== نظام الحظر ====== */
 state.myBlocks=new Set();
+
+
+/* ═══ رسالة الزائر للإدارة ═══
+   كانت هذه الدالة داخل js/admin/reports.js — أي داخل وحدة الإشراف
+   الكسولة التي لا تُحمَّل إلا بضغط الترس. ونموذجها بصفحة «رسائلي»
+   يستعمله كل زائر، فكان الزر يرمي «sendFeedback is not defined»
+   لكل من لم يفتح لوحة الإشراف — أي لكل الناس إلا المالك.
+
+   وأسوأ ما فيه أن فاحصنا كان يعرف أنها مفقودة ويستثنيها بالاسم
+   ضمن «مؤجّلة للإشراف». والدرس: ما يقرّر أن الدالة إشرافية هو
+   موضع زرّها بالصفحة، لا اسم الملف الذي وُضعت فيه. */
+export async function sendFeedback(){
+  const kind=$('fbKind').value,body=$('fbBody').value.trim();
+  if(body.length<3)return toast('اكتب رسالتك أول',true);
+  if(typeof checkText==='function'){
+    const bad=checkText(body,{allowLink:true});
+    if(bad){toast(bad,true);return}
+  }
+  if(typeof checkRate==='function'){
+    const lim=await checkRate('message');
+    if(lim){toast(lim,true);return}
+  }
+  const b=$('fbGo');b.disabled=true;b.textContent='⏳';
+  const { error } = await sb.from('feedback').insert({user_id:currentUser()?.id,kind,body});
+  b.disabled=false;b.textContent='إرسال 📨';
+  if(error){toast('تعذر الإرسال: '+error.message,true);return}
+  if(typeof logRate==='function')logRate('message');
+  $('fbBody').value='';
+  toast('وصلت رسالتك للإدارة، شكراً لك 🙏');
+}

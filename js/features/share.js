@@ -166,6 +166,22 @@ export async function shareProfile(uid){
 }
 
 /* ====== حماية المحتوى: فلتر الكلمات وحد المعدّل ====== */
+/* ═══ رابط الصورة الخاص ═══
+   كل مشاركة كانت تحمل https://sowra.app — الرئيسية. فمن يرسل صورةً
+   بعينها يصل المستقبِلَ رابطٌ لا صورة فيه، ومعاينة واتساب واحدة لكل
+   الصور. هذه تبني رابط صفحة الصورة التي يولّدها tools/gen-pages.mjs،
+   ومنها تُقرأ وسوم og: فتظهر الصورة وعنوانها بالمعاينة.
+   والمسار يُشتقّ من موقع الصفحة نفسها فيعمل باللاب وبالإنتاج معاً. */
+export function photoUrl(id){
+  try{
+    const u = new URL(window.location.href);
+    const dir = u.pathname.replace(/\/[^/]*$/, '');      /* مجلد التطبيق */
+    return `${u.origin}${dir}/p/${id}.html`;
+  }catch(e){
+    return 'https://sowra.app/p/' + id + '.html';
+  }
+}
+
 export async function shareCard(p){
   toast('نجهّز البطاقة...');
   try{
@@ -224,7 +240,7 @@ export async function shareCard(p){
       ctx.fillText('★ '+Number(p.avg_stars).toFixed(1),W-60,ih+108);
     }
 
-    const qr2=await qrDataUrl('https://sowra.app',180);
+    const qr2=await qrDataUrl(photoUrl(p.id),180);
     if(qr2){
       const qs=120, qx=60, qy=ih+110;
       ctx.fillStyle='#F7F1E3';
@@ -255,7 +271,7 @@ export async function shareCard(p){
           await navigator.share({
             files:[file],
             title:p.title,
-            text:p.title+' — من «صورة من بلدي» 📸\nhttps://sowra.app'
+            text:p.title+' — من «صورة من بلدي» 📸\n'+photoUrl(p.id)
           });
           return;
         }catch(e){}

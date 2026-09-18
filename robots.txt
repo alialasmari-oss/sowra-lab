@@ -1,4 +1,3 @@
+# نسخة مختبر — ممنوعة من الأرشفة حتى لا تنافس sowra.app
 User-agent: *
-Allow: /
-
-Sitemap: https://alialasmari-oss.github.io/sowra-lab/sitemap.xml
+Disallow: /

@@ -177,6 +177,56 @@ try{
   }
 }catch(e){}
 
+/* ═══ خلفية فاتحة مثبّتة بلا غطاء ليلي ═══
+   بنر لقطة الأسبوع كان خلفيته #FFF3CF مثبّتةً بالحجر ونصّه var(--txt).
+   نهاراً: أسودُ على كريمي. ليلاً: --txt يصير #F0E8DA فيصبح أبيضَ على
+   كريمي — تباينٌ 1.05:1، أي نصٌّ غير موجود. ولا يكشفه أحد إلا زائرٌ
+   يفتح الوضع الليلي ويخبرنا.
+   القاعدة: كل قاعدة خلفيتها لونٌ فاتح مكتوبٌ بالحجر ونصُّها متغيّر
+   أو موروث، لازم لها قاعدة body.dark تقابلها. */
+let lightBg = [];
+try{
+  const css = fs.readFileSync('./style.css', 'utf8');
+  const covered = new Set();
+  for(const m of css.matchAll(/body\.dark\s*([^{]*)\{/g))
+    for(const s of m[1].split(','))
+      { const t = s.replace(/^\s*body\.dark\s*/,'').trim(); if(t) covered.add(t); }
+  const lum = h => {
+    h = h.replace('#',''); if(h.length===3) h = [...h].map(c=>c+c).join('');
+    const v = [0,2,4].map(i => parseInt(h.slice(i,i+2),16)/255)
+                     .map(c => c<=0.03928 ? c/12.92 : ((c+0.055)/1.055)**2.4);
+    return 0.2126*v[0] + 0.7152*v[1] + 0.0722*v[2];
+  };
+  /* ماسحٌ بعدّ الأقواس لا بتعبير نمطي: جرّبنا النمطي أولاً فابتلع
+     قاعدة .week-strip نفسها — أي أن القاعدة التي كُتبت لهذا العطل
+     بالذات لم تكن تراه. فاحصٌ يمرّ على عطله أسوأ من لا فاحص. */
+  const rules = [];
+  for(let i = 0, depth = 0, start = 0, selStart = 0; i < css.length; i++){
+    if(css[i] === '{'){
+      if(depth === 0){ selStart = start; start = i + 1; }
+      depth++;
+    } else if(css[i] === '}'){
+      depth--;
+      if(depth === 0){
+        rules.push([css.slice(selStart, start - 1), css.slice(start, i)]);
+        start = i + 1;
+      }
+    }
+  }
+  for(const [rawSel, body] of rules){
+    const sel = rawSel.replace(/\/\*[\s\S]*?\*\//g, '').trim().split('\n').pop().trim();
+    if(!sel || /^(body\.dark|@|:root)/.test(sel)) continue;
+    const bg = [...body.matchAll(/(?:^|;)\s*background(?:-color|-image)?\s*:([^;]*)/g)];
+    const light = bg.flatMap(d => [...d[1].matchAll(/#[0-9A-Fa-f]{3,6}\b/g)].map(x=>x[0]))
+                    .filter(h => lum(h) > 0.75);
+    if(!light.length) continue;
+    const col = (body.match(/(?:^|;)\s*color\s*:([^;]*)/) || [,''])[1].trim();
+    if(col && !/var\(--(txt|ink)/.test(col)) continue;   /* نصٌّ فاتح صريح — مقصود */
+    if(sel.split(',').some(p => covered.has(p.trim()))) continue;
+    lightBg.push(`${sel.slice(0,40)} (${light[0]})`);
+  }
+}catch(e){}
+
 /* ═══ قيمة متغيّرة تُقرأ من الحاجز ═══
    main.js يسجّل الميزات بـObject.assign — وهذا ينسخ قيمة الارتباط
    لحظة التسجيل لا الارتباط نفسه. فكل `export let` يُقرأ بـget() من
@@ -281,6 +331,9 @@ if(rawPaths.length){ fails++; console.log(`       ${rawPaths.join(' · ')} — �
 
 line(!mutedErrs.length, 'خطأ قاعدة مطموس', mutedErrs.length || '');
 if(mutedErrs.length){ fails++; console.log(`       ${mutedErrs.join(' · ')} — استعمل dbErr(الإجراء, error)`); }
+
+line(!lightBg.length, 'خلفية فاتحة بلا وضع ليلي', lightBg.length || '');
+if(lightBg.length){ fails++; lightBg.forEach(s => console.log(`       ${s} — أضف قاعدة body.dark`)); }
 
 line(!staleGets.length, 'قيمة متغيّرة من الحاجز', staleGets.length || '');
 if(staleGets.length){ fails++; staleGets.forEach(s => console.log(`       ${s} — صدّر دالة قارئة واستعمل need`)); }

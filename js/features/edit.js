@@ -49,7 +49,10 @@ const tagName = need('tagName');
 const closeSheet = need('closeSheet');
 const openSheet = need('openSheet');
 export function openEdit(pid){
-  const p=state.photos.find(x=>x.id===pid);
+  /* كـopenSheet: الخلاصة العامة لا تضمّ المخفيّات بقرار إشراف،
+     والمالك يعدّلها من اللوحة — فلولا الاحتياط لم يفتح شيء. */
+  const p=state.photos.find(x=>x.id===pid)
+        || (state.admPhotos||[]).find(x=>x.id===pid);
   if(!p)return;
   const _mine=!!(currentUser()&&p.user_id===currentUser()?.id);
   const _owner=(isOwner());
@@ -60,6 +63,7 @@ export function openEdit(pid){
   const dg=$('edDescGroup');
   if(dg)dg.style.display=isV?'none':'block';
   if($('edDesc'))$('edDesc').value=p.description||'';
+  if($('edCat'))$('edCat').value=p.category||'other';
   $('edLabel').innerHTML=(isV?'عدّل عنوان المقطع':'عدّل عنوان الصورة ووصفها')
     +(_mine?'':'<div style="font-size:11px;color:var(--sadu);font-weight:700;margin-top:5px">🛡️ تعديل إداري — صورة '+esc(p.photographer||'عضو')+'</div>');
   state.edTrTitle=p.title_en||'';state.edTrDesc=p.description_en||'';
@@ -100,6 +104,10 @@ export async function saveEdit(){
 
   const btn=$('edSave');btn.disabled=true;btn.textContent='⏳';
   const upd={title,description:desc,title_en:state.edTrTitle,description_en:state.edTrDesc};
+  /* التصنيف: يُختار عند الرفع ولم يكن له سبيلُ تصحيح. وما دام
+     نموذج الرفع لا يصفّره بين صورةٍ وأخرى، فالأخطاء واقعةٌ لا
+     محتملة — فلا بدّ من بابٍ لإصلاحها. */
+  if($('edCat')&&$('edCat').value) upd.category=$('edCat').value;
   // الموقع إن تغيّر
   const g=state.edGeo;
   const cur=state.photos.find(x=>x.id===pid);

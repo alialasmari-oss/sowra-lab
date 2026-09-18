@@ -3,7 +3,7 @@
 
 import { sb } from '../core/db.js';
 import { need } from '../core/hub.js';
-import { compressTo } from '../core/media.js';
+import { compressTo, thumbPath, hiPath } from '../core/media.js';
 import { isOwner, reelsState, state } from '../core/state.js';
 import { $, esc, toast } from '../core/ui.js';
 import { geo, COORDS, REGION_CENTER, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
@@ -57,7 +57,8 @@ export async function admScanOrphans(mode){
     const keepImg=new Set();
     rows.filter(x=>x.media_type!=='video').forEach(x=>{
       keepImg.add(x.image_path);
-      keepImg.add(x.image_path.replace('.jpg','_t.jpg'));
+      keepImg.add(thumbPath(x.image_path));
+      keepImg.add(hiPath(x.image_path));   /* بدونه يعدّ منظّف اليتامى كل نسخ الأرشيف نفاية ويمحوها */
     });
     // بنر الراعي وملفات الإدارة — مسجّلة بجداول أخرى
     try{
@@ -173,7 +174,7 @@ export async function admRebuildThumbs(){
         const thumb=await compressTo(dl.data,380,0.72);
         if(!thumb){lastErr='تعذر الضغط';fail++;continue}
 
-        const tp=p.image_path.replace(/\.jpg$/i,'_t.jpg');
+        const tp=thumbPath(p.image_path);
         const up=await sb.storage.from('photos').upload(tp,thumb,{
           contentType:'image/jpeg', cacheControl:'31536000', upsert:true
         });

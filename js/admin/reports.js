@@ -4,6 +4,7 @@
 import { currentUser, sb } from '../core/db.js';
 import { checkText } from '../core/format.js';
 import { need } from '../core/hub.js';
+import { allPaths } from '../core/media.js';
 import { isOwner, state } from '../core/state.js';
 import { $, esc, prompt, toast } from '../core/ui.js';
 import { geo, COORDS, REGION_CENTER, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
@@ -160,7 +161,7 @@ export async function admDel(id,path){
   if(error){toast('فشل الحذف',true);return}
   try{
     if(isVid) await sb.storage.from('videos').remove([path]);
-    else await sb.storage.from('photos').remove([path,path.replace('.jpg','_t.jpg')]);
+    else await sb.storage.from('photos').remove(allPaths(path));   /* المصغّرة والأرشيف معاً */
   }catch(e){}
   toast(isVid?'حُذف الفيديو نهائياً':'حُذفت الصورة نهائياً');
   await openAdmin();await loadPhotos();

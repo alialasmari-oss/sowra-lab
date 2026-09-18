@@ -83,16 +83,85 @@ export async function openAdmin(){
   setTimeout(function(){if(typeof hideRestrictedTabs==='function')hideRestrictedTabs()},150);
   go('adm');
   $('admList').innerHTML='<div class="empty">⏳ جاري التحميل...</div>';
-  const [ph,rp]=await Promise.all([
-    sb.from('photos').select('*, profiles!user_id(display_name, banned)').order('created_at',{ascending:false}),
-    sb.from('reports').select('photo_id')
-  ]);
-  if(ph.error){$('admList').innerHTML=`<div class="empty">⚠️ خطأ في جلب الصور:<br><span style="direction:ltr;display:inline-block;color:var(--sadu);font-size:12px">${ph.error.message}</span></div>`;return}
+  /* ═══ كان هنا select('*') بلا حدّ ═══
+     يجلب كل صور المنصة بكل أعمدتها عند كل فتحةٍ للترس. عند خمسة آلاف
+     صورة: عدّة ميغابايت في كل مرة، وخمسة آلاف بطاقة في الصفحة. وهذا
+     الطريق كان يُغذّي التبويبين ٣ والشبكة معاً.
+     صار الترس يجلب خريطة البلاغات وحدها — وهي صفٌّ صغير لكل بلاغ —
+     ثم يطلب الصور بمرشِّحاتها من loadAdmList، مُقيَّدةً بحدّ. */
+  const rp=await sb.from('reports').select('photo_id');
   if(rp.error){$('admList').innerHTML=`<div class="empty">⚠️ خطأ في جلب البلاغات:<br><span style="direction:ltr;display:inline-block;color:var(--sadu);font-size:12px">${rp.error.message}</span></div>`;return}
-  state.admPhotos=ph.data||[];
   state.admReps={};
   (rp.data||[]).forEach(r=>state.admReps[r.photo_id]=(state.admReps[r.photo_id]||0)+1);
   admSetTab(state.admTab);
+}
+
+/* ═══ شريط مرشِّحات قائمة الإشراف ═══
+   نفس شريط شبكة الترشيح — وبه يجد المالك الصورة المصنَّفة خطأً
+   ليصحّحها، وكان ذلك متعذّراً: قائمةٌ بلا بحثٍ ولا مرشِّح. */
+const ADM_LIMIT = 60;
+
+export function admTools(){
+  if(!$('admTools')) return;
+  if($('adQ')) return;                    /* مرسومٌ سلفاً — لا نمسح ما كتبه */
+  const regs = $('fRegion') ? $('fRegion').innerHTML : '<option value="">كل المناطق</option>';
+  const cats = [['','كل التصنيفات'],['nature','🌿 طبيعة'],['arch','🏛️ عمارة'],
+                ['wildlife','🦅 طيور'],['people','👥 أشخاص'],['bw','⬛ أبيض وأسود'],
+                ['heritage','🏺 تراث'],['landmark','🕌 معلم'],['other','📷 أخرى']];
+  const st = "background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:9px;color:var(--txt);font-family:'Tajawal';font-size:12.5px;outline:none;min-width:0";
+  $('admTools').innerHTML = `<div class="wk-tools">
+    <input id="adQ" placeholder="ابحث بعنوان الصورة…" oninput="admSearch()" style="${st};grid-column:1/-1">
+    <select id="adCat" onchange="loadAdmList()" style="${st}">
+      ${cats.map(c=>`<option value="${c[0]}">${c[1]}</option>`).join('')}
+    </select>
+    <select id="adSort" onchange="loadAdmList()" style="${st}">
+      <option value="new">🆕 الأحدث</option>
+      <option value="old">🕰️ الأقدم</option>
+    </select>
+    <select id="adReg" onchange="loadAdmList()" style="${st};grid-column:1/-1">${regs}</select>
+  </div>`;
+}
+
+let _adT = null;
+export function admSearch(){
+  clearTimeout(_adT);
+  _adT = setTimeout(() => { loadAdmList(); }, 350);
+}
+
+export async function loadAdmList(){
+  const box = $('admList'); if(!box) return;
+  const rep = state.admTab === 'rep';
+  admTools();
+  const tb = $('admTools'); if(tb) tb.style.display = rep ? 'none' : '';
+  box.innerHTML = '<div class="empty">⏳</div>';
+
+  let q = sb.from('photos').select('*, profiles!user_id(display_name, banned)');
+
+  if(rep){
+    /* تبويب المراجعة: المبلَّغ عنها أو المخفيّة — لا كل الصور */
+    const ids = Object.keys(state.admReps||{}).map(Number);
+    q = ids.length ? q.or(`hidden.eq.true,id.in.(${ids.join(',')})`) : q.eq('hidden', true);
+    q = q.order('created_at', {ascending:false}).limit(ADM_LIMIT);
+  }else{
+    const term = ($('adQ')||{}).value || '';
+    const cat  = ($('adCat')||{}).value || '';
+    const reg  = ($('adReg')||{}).value || '';
+    const srt  = ($('adSort')||{}).value || 'new';
+    if(term.trim()) q = q.ilike('title', '%'+term.trim()+'%');
+    if(cat) q = q.eq('category', cat);
+    if(reg) q = q.eq('region', reg);
+    q = q.order('created_at', {ascending: srt === 'old'}).limit(ADM_LIMIT);
+  }
+
+  const r = await q;
+  if(r.error){ dbErr('جلب الصور', r.error); box.innerHTML=''; return; }
+  state.admPhotos = r.data || [];
+  admRender();
+  if(!rep && state.admPhotos.length >= ADM_LIMIT){
+    box.insertAdjacentHTML('afterbegin',
+      `<div class="empty" style="padding:10px;grid-column:1/-1;font-size:12px">`
+      + `بلغنا حدّ العرض (${ADM_LIMIT}) — ضيّق البحث لترى الباقي</div>`);
+  }
 }
 
 export function hideRestrictedTabs(){
@@ -143,7 +212,7 @@ export function admSetTab(t){
   else if(t==='qs')loadAdmQuests();
   else if(t==='mu')loadAdmMusic();
   if(t==='ec')loadEC();
-  else admRender();
+  else if(t==='rep'||t==='all')loadAdmList();
 }
 
 /* ====== الإحصائيات ====== */
@@ -253,24 +322,37 @@ export async function loadWeekPicker(){
   if(r.error){ dbErr('جلب صور الترشيح', r.error); return; }
 
   const rest = (r.data||[]).filter(p => p.image_path && !on.has(p.id));
-  const list = [...picked, ...rest];
-  const hint = `<div style="font-size:11.5px;color:var(--txt-dim);margin-bottom:8px">`
-    + `${picked.length} مرشّحة · ${rest.length} معروضة`
-    + (rest.length >= WK_LIMIT ? ` — بلغنا حدّ العرض (${WK_LIMIT})، ضيّق البحث` : '')
-    + `</div>`;
 
-  if(!list.length){
-    box.innerHTML = hint + '<div class="empty" style="padding:22px">ما فيه صور بهذا المرشِّح — وسّعه أو ابحث باسمٍ آخر</div>';
-    return;
-  }
-  box.innerHTML = hint + '<div class="wk-pick">' + list.map(p => {
+  const cell = p => {
     const sel = on.has(p.id);
     return `<div class="wk-cell${sel?' on':''}" data-id="${p.id}" onclick="admWeekPick(${p.id})" title="${esc(p.title)}">
       <img src="${thumbUrl(p.image_path)}" loading="lazy" alt="${esc(p.title)}">
       <span class="wk-box">${sel?'✓':''}</span>
       <span class="wk-t">#${p.id} · ${esc(p.title)}</span>
     </div>`;
-  }).join('') + '</div>';
+  };
+  const grid = arr => '<div class="wk-pick">' + arr.map(cell).join('') + '</div>';
+
+  /* ═══ قسمان بعنوانين، لا صفٌّ واحد ═══
+     سأل المالك: رشّحتُ «عمارة» فتظهر لي صورةُ شجرٍ دائماً — لماذا؟
+     والسبب أنها من الخمس المرشَّحة، والمرشَّحة تتقدّم الصفّ مهما كان
+     المرشِّح عمداً: لئلا يغيب اختياره عن عينه لأنه بدّل تصنيفاً.
+     لكني خلطتها بالنتائج في شبكةٍ واحدة، فبدت كأنها نتيجةُ بحثٍ
+     خاطئة. والعلّة في البيان لا في السلوك: فصلناهما بعنوانين.
+     فإن ظهرت صورةٌ تحت «نتائج البحث» وتصنيفها لا يطابق، فالخلل حينها
+     في تصنيفها بالقاعدة لا في المرشِّح. */
+  let html = '';
+  if(picked.length){
+    html += `<div class="wk-sec">🏆 المرشَّحة الآن (${picked.length}/5)`
+         +  `<span>تظهر دائماً مهما غيّرت المرشِّح</span></div>` + grid(picked);
+  }
+  html += `<div class="wk-sec">🔎 نتائج البحث (${rest.length})`
+       +  (rest.length >= WK_LIMIT ? `<span>بلغنا حدّ العرض ${WK_LIMIT} — ضيّق البحث</span>` : '')
+       +  `</div>`;
+  html += rest.length ? grid(rest)
+        : '<div class="empty" style="padding:22px">ما فيه صور بهذا المرشِّح — وسّعه أو ابحث باسمٍ آخر</div>';
+
+  box.innerHTML = html;
 }
 
 export async function loadAdmWeek(){
@@ -281,11 +363,9 @@ export async function loadAdmWeek(){
   if(CW){
     const en=await sb.from('weekly_entries').select('photo_id').eq('contest_id',CW.id);
     const ids=(en.data||[]).map(e=>e.photo_id);
-    entries=state.admPhotos.filter(p=>ids.includes(p.id));
-    if(!state.admPhotos.length){
-      const ph=await sb.from('photos').select('id,title').in('id',ids.length?ids:[0]);
-      entries=ph.data||[];
-    }
+    /* المعرّفات وحدها تكفي للعدّاد — وadmPhotos صارت مقيَّدةً بمرشِّح
+       فلا يصحّ عدّ المرشَّحات منها */
+    entries=ids.map(id=>({id}));
   }
   $('admWk').innerHTML=`
     <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px">

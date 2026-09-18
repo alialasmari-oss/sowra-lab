@@ -72,7 +72,7 @@ export async function openAdmin(){
       if(e)e.style.display='none';
     });
     const ae=document.getElementById('admEC');
-    if(ae)ae.style.display='block';
+    if(ae)ae.style.display='';
     loadEC();
     return;
   }
@@ -124,14 +124,18 @@ export function admSetTab(t){
   ['Rep','All','Plc','Fb','St','Wk','Qs','Mu','Ec'].forEach(x=>{const e=$('admTab'+x);if(e)e.classList.remove('on')});
   const m={rep:'Rep',all:'All',plc:'Plc',fb:'Fb',st:'St',wk:'Wk',qs:'Qs',ec:'Ec',mu:'Mu'};
   const cur=$('admTab'+m[t]);if(cur)cur.classList.add('on');
-  $('admPlaces').style.display=t==='plc'?'block':'none';
-  $('admFb').style.display=t==='fb'?'block':'none';
-  $('admSt').style.display=t==='st'?'block':'none';
-  $('admWk').style.display=t==='wk'?'block':'none';
-  const aq=$('admQs');if(aq)aq.style.display=t==='qs'?'block':'none';
-  const am=$('admMu');if(am)am.style.display=t==='mu'?'block':'none';
-  const ae=$('admEC');if(ae)ae.style.display=t==='ec'?'block':'none';
-  $('admList').style.display=(t==='rep'||t==='all')?'block':'none';
+  $('admPlaces').style.display=t==='plc'?'':'none';
+  $('admFb').style.display=t==='fb'?'':'none';
+  $('admSt').style.display=t==='st'?'':'none';
+  $('admWk').style.display=t==='wk'?'':'none';
+  const aq=$('admQs');if(aq)aq.style.display=t==='qs'?'':'none';
+  const am=$('admMu');if(am)am.style.display=t==='mu'?'':'none';
+  const ae=$('admEC');if(ae)ae.style.display=t==='ec'?'':'none';
+  /* كان 'block' — ونمطٌ سطريّ يغلب الورقة كلها مهما كتبنا فيها.
+     فقائمة الإشراف تبقى بطاقةً واحدة بالسطر على سطح المكتب ولو
+     جعلناها شبكةً بالأنماط: السطر هذا يمحو ذلك عند كل نقرة تبويب.
+     والفراغ '' يرجع العنصر لما تقوله الورقة — وهو معنى «أظهره». */
+  $('admList').style.display=(t==='rep'||t==='all')?'':'none';
   if(t==='plc')renderPlaces();
   else if(t==='fb')loadFb();
   else if(t==='st'){loadStats();setTimeout(loadCommercial,400);}

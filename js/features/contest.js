@@ -93,11 +93,15 @@ export function renderWeek(){
     return `<div class="card wcard ${isWin&&results?'winner':''} ${state.myWeekVote===p.id&&!results?'voted':''}">
       <div class="ph" style="height:170px;cursor:zoom-in" onclick="openSheet(${p.id})" title="اضغط للتكبير والتفاصيل"><img src="${thumbUrl(p.image_path)}" onerror="this.onerror=null;this.src='${imgUrl(p.image_path)}'" alt="${esc(p.title)}">
         ${isWin?'<div class="medal">👑 '+(results?'الفائز':'متصدرة')+'</div>':(results?`<div class="medal">#${i+1}</div>`:'')}
-        <span class="w-zoom">🔍</span>
+        <span class="w-zoom">🔍 تكبير</span>
       </div>
       <div class="card-body">
         <div class="card-title">${esc(p.title)}</div>
         <div class="card-meta"><span class="who">${rankOf(p).ic} ${esc(p.photographer)}</span><span>🗳️ ${v} صوت</span></div>
+        <!-- زرٌّ صريح لا شارةٌ بالزاوية: الشارة الصغيرة الشفافة تذوب في
+             الصورة فلا يجدها الزائر — وقد لا يجدها صاحب التطبيق نفسه.
+             وشاشة تحكيم يجب أن تقول ما يُفعل فيها لا أن تُخفيه. -->
+        <button class="btn wzoom-btn" onclick="openSheet(${p.id})">🔍 تكبير وتفاصيل</button>
         ${results?'':`<button class="btn wvote ${state.myWeekVote===p.id?'on':''}" onclick="voteWeek(${p.id})">${state.myWeekVote===p.id?'✓ صوتك هنا':'صوّت لهذه اللقطة'}</button>`}
       </div>
     </div>`;

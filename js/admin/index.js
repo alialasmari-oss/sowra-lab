@@ -172,13 +172,98 @@ export const getCW = () => CW;
    عشرات بنظرةٍ واحدة. فصارت شبكةً مربّعة هنا، حيث تُدار المسابقة،
    وعلى كل صورة مربّعُ اختيار ينقلب ✓ ويُحفظ فوراً.
    والمرشَّحة تتقدّم الصفّ ليُرى المختار أولاً. */
-function weekPicker(entries){
-  const on = new Set(entries.map(p => p.id));
-  const pool = state.admPhotos.filter(p => p.image_path);
-  if(!pool.length)
-    return '<div class="empty" style="padding:20px">ما فيه صور — افتح تبويب 🗂️ أول</div>';
-  const sorted = [...pool].sort((a,b) => (on.has(b.id)?1:0) - (on.has(a.id)?1:0));
-  return '<div class="wk-pick">' + sorted.map(p => {
+/* ═══ لماذا استعلامٌ مستقلّ لا state.admPhotos ═══
+   كانت الشبكة ترسم state.admPhotos كلها — وهي ثمرة select('*') بلا
+   حدٍّ يجلب كل صور المنصة عند كل فتحةٍ للترس. عند خمسة آلاف صورة
+   ينهار هذا قبل أن تنهار الشبكة: عدّة ميغابايت في كل مرة، ثم خمسة
+   آلاف خليّة في الصفحة.
+   والأهمّ أن المشرف لا يريد خمسة آلاف أصلاً — يريد خمساً من صور
+   هذا الأسبوع. فعرضُ الكل ليس ميزةً تُصلَح بل خطأٌ يُحذف.
+   فصارت الشبكة نافذةً: تفتح على آخر سبعة أيام، ومعها بحثٌ ومرشّحات،
+   والاستعلام مُقيَّد بـ٤٨ صفاً لا يُجلب منها إلا الأعمدة المعروضة.
+   والمرشَّحات تُجلب بمعرّفاتها دائماً وتتقدّم الصفّ مهما كان المرشِّح،
+   وإلا اختفى اختيارُ المشرف عن عينه لمجرّد أنه بدّل المنطقة. */
+const WK_LIMIT = 48;
+
+function wkTools(){
+  const regs = ($('fRegion') ? $('fRegion').innerHTML : '<option value="">كل المناطق</option>')
+                 .replace('كل المناطق','كل المناطق');
+  const cats = [['','كل التصنيفات'],['nature','🌿 طبيعة'],['arch','🏛️ عمارة'],
+                ['wildlife','🦅 طيور'],['people','👥 أشخاص'],['bw','⬛ أبيض وأسود'],
+                ['heritage','🏺 تراث'],['landmark','🕌 معلم'],['other','📷 أخرى']];
+  const sel = 'background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:9px;color:var(--txt);font-family:\'Tajawal\';font-size:12.5px;outline:none;min-width:0';
+  return `<div class="wk-tools">
+    <input id="wkQ" placeholder="ابحث بعنوان الصورة…" oninput="admWeekSearch()" style="${sel};grid-column:1/-1">
+    <select id="wkScope" onchange="loadWeekPicker()" style="${sel}">
+      <option value="week">🗓️ آخر ٧ أيام</option>
+      <option value="month">🗓️ آخر ٣٠ يوماً</option>
+      <option value="top">⭐ الأعلى تقييماً</option>
+      <option value="all">📚 كل الصور</option>
+    </select>
+    <select id="wkCat" onchange="loadWeekPicker()" style="${sel}">
+      ${cats.map(c=>`<option value="${c[0]}">${c[1]}</option>`).join('')}
+    </select>
+    <select id="wkReg" onchange="loadWeekPicker()" style="${sel};grid-column:1/-1">${regs}</select>
+  </div>
+  <div id="wkPickBox"><div class="empty" style="padding:18px">⏳</div></div>`;
+}
+
+/* بحثٌ بمهلة: لا نستعلم عند كل حرف */
+let _wkT = null;
+export function admWeekSearch(){
+  clearTimeout(_wkT);
+  _wkT = setTimeout(() => { loadWeekPicker(); }, 350);
+}
+
+export async function loadWeekPicker(){
+  const box = $('wkPickBox'); if(!box) return;
+  box.innerHTML = '<div class="empty" style="padding:18px">⏳</div>';
+
+  /* المرشَّحات أولاً — بمعرّفاتها، مهما كان المرشِّح */
+  let picked = [];
+  if(CW){
+    const en = await sb.from('weekly_entries').select('photo_id').eq('contest_id', CW.id);
+    const ids = (en.data||[]).map(e => e.photo_id);
+    if(ids.length){
+      const r = await sb.from('photos_ranked')
+        .select('id,title,image_path,avg_stars').in('id', ids);
+      if(r.error){ dbErr('جلب الترشيحات', r.error); return; }
+      picked = r.data || [];
+    }
+  }
+  const on = new Set(picked.map(p => p.id));
+
+  const term  = ($('wkQ')     || {}).value || '';
+  const scope = ($('wkScope') || {}).value || 'week';
+  const cat   = ($('wkCat')   || {}).value || '';
+  const reg   = ($('wkReg')   || {}).value || '';
+  const since = d => new Date(Date.now() - d*864e5).toISOString();
+
+  let q = sb.from('photos_ranked').select('id,title,image_path,avg_stars');
+  if(term.trim()) q = q.ilike('title', '%'+term.trim()+'%');
+  if(cat) q = q.eq('category', cat);
+  if(reg) q = q.eq('region', reg);
+  if(scope === 'week')  q = q.gte('created_at', since(7));
+  if(scope === 'month') q = q.gte('created_at', since(30));
+  q = (scope === 'top')
+        ? q.order('avg_stars', {ascending:false}).order('id', {ascending:false})
+        : q.order('created_at', {ascending:false});
+
+  const r = await q.limit(WK_LIMIT);
+  if(r.error){ dbErr('جلب صور الترشيح', r.error); return; }
+
+  const rest = (r.data||[]).filter(p => p.image_path && !on.has(p.id));
+  const list = [...picked, ...rest];
+  const hint = `<div style="font-size:11.5px;color:var(--txt-dim);margin-bottom:8px">`
+    + `${picked.length} مرشّحة · ${rest.length} معروضة`
+    + (rest.length >= WK_LIMIT ? ` — بلغنا حدّ العرض (${WK_LIMIT})، ضيّق البحث` : '')
+    + `</div>`;
+
+  if(!list.length){
+    box.innerHTML = hint + '<div class="empty" style="padding:22px">ما فيه صور بهذا المرشِّح — وسّعه أو ابحث باسمٍ آخر</div>';
+    return;
+  }
+  box.innerHTML = hint + '<div class="wk-pick">' + list.map(p => {
     const sel = on.has(p.id);
     return `<div class="wk-cell${sel?' on':''}" data-id="${p.id}" onclick="admWeekPick(${p.id})" title="${esc(p.title)}">
       <img src="${thumbUrl(p.image_path)}" loading="lazy" alt="${esc(p.title)}">
@@ -218,7 +303,9 @@ export async function loadAdmWeek(){
     </div>
     <div style="font-weight:700;font-size:14px;margin-bottom:4px">اللقطات المرشحة <span id="wkCount">(${entries.length}/5)</span></div>
     <div style="font-size:11.5px;color:var(--txt-dim);margin-bottom:9px">اضغط الصورة لترشيحها — تنقلب العلامة ✓ وتُحفظ فوراً</div>
-    ${weekPicker(entries)}` + admChallengeBlock() + admReelsBlock() + admInspectBlock() + admCommBlock() + admCleanupBlock() + await admSpBlock() + admSponsorsBtn() + admSponsorSideBlock() +  admNewsBlock() + admGoogleLoginBlock() + admMaintBlock() + await admCuratorsBlock() + await admTeamBlock();
+    ${wkTools()}` + admChallengeBlock() + admReelsBlock() + admInspectBlock() + admCommBlock() + admCleanupBlock() + await admSpBlock() + admSponsorsBtn() + admSponsorSideBlock() +  admNewsBlock() + admGoogleLoginBlock() + admMaintBlock() + await admCuratorsBlock() + await admTeamBlock();
+  /* الشبكة تُحمَّل باستعلامها الخاص بعد رسم اللوحة */
+  loadWeekPicker();
 }
 /* ====== بنر الراعي ====== */
 

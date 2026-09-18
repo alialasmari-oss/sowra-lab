@@ -3,7 +3,9 @@
    يفحص: التكرار · الدورات · المراجع المفقودة · الأحجام · onclick */
 
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
+import { execFileSync } from 'child_process';
 
 const JS = './js';
 const files = [];
@@ -154,6 +156,76 @@ try{
   }
 }catch(e){}
 
+/* ═══ خطأ قاعدة مطموس ═══
+   «لقطة الأسبوع عند تفعيلها للجمهور تظهر رسالة خطأ» — وما كان بوسع
+   أحد أن يعرف أيّ خطأ، لأن السطر كان: if(error){toast('فشلت العملية')}
+   فيرمي رسالة سوبابيز التي تسمّي السبب بالحرف. تسعة مواضع كانت كذلك.
+   القاعدة: كل فرع يفحص error لازم يذكره — dbErr(…, error) أو
+   error.message — وإلا فالعطل بلا دليل. */
+let mutedErrs = [];
+try{
+  for(const f of files){
+    read(f).split('\n').forEach((ln, i) => {
+      if(!/\bif\s*\(\s*(error|up\.error|r\.error)\b/.test(ln)) return;
+      if(!/toast\s*\(/.test(ln)) return;
+      /* فرعٌ يفحص رمزاً بعينه (23505 مثلاً) رسالته الودّية مقصودة،
+         والسبب معروف سلفاً من الرمز — فليس طمساً */
+      if(/\berror\.code\s*===/.test(ln)) return;
+      if(/\berror(\.message|\.code|\.hint|\.details)|dbErr\s*\(/.test(ln.replace(/\bif\s*\(\s*[^)]*\)/, ''))) return;
+      mutedErrs.push(`${f}:${i+1}`);
+    });
+  }
+}catch(e){}
+
+/* ═══ قيمة متغيّرة تُقرأ من الحاجز ═══
+   main.js يسجّل الميزات بـObject.assign — وهذا ينسخ قيمة الارتباط
+   لحظة التسجيل لا الارتباط نفسه. فكل `export let` يُقرأ بـget() من
+   وحدة أخرى يظلّ على قيمته الأولى للأبد ولو أُسند بعدها ألف مرة.
+   هكذا بقيت CW=null شهوراً فانهار كل زر بمسابقة لقطة الأسبوع.
+   القاعدة: القيم الثابتة (const) تمرّ بـget، والمتغيّرة تمرّ بدالة
+   قارئة: `export const getX = () => X` ثم need('getX'). */
+let staleGets = [];
+try{
+  const mutable = new Set();
+  for(const f of files)
+    for(const m of read(f).matchAll(/^export\s+let\s+([A-Za-z_$][\w$]*)/gm))
+      mutable.add(m[1]);
+  /* التعليقات تُفرَّغ ويُحفظ عدد أسطرها — وإلا فشرحُ العطل يُحسب عطلاً */
+  const strip = s => s
+    .replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '))
+    .replace(/(^|[^:])\/\/.*$/gm, (m, p) => p);
+  for(const f of files){
+    strip(read(f)).split('\n').forEach((ln, i) => {
+      for(const m of ln.matchAll(/(?<![.\w$])get\(\s*['"]([A-Za-z_$][\w$]*)['"]/g))
+        if(mutable.has(m[1])) staleGets.push(`${f}:${i+1} — ${m[1]}`);
+    });
+  }
+}catch(e){}
+
+/* ═══ خطأ إعرابي — أول الفحوص وأهمّها ═══
+   هذا الفاحص فحص ثمانية أشياء ذكية شهوراً ولم يفحص أبسطها: هل الملف
+   جافاسكربت صحيح؟ فمرّت عليه تعليقةٌ أُغلقت مرتين، وقبلها دالةٌ
+   قُطع ذيلها — كلاهما «سليم» بشهادته، وكلاهما يوقف التطبيق كله.
+   وأخبث ما في الباب أن `node --check` على ملف .js يرجع صفراً
+   لملفٍ فيه export ولو كان محشوّاً بالحشو — جرّبناه: «this is not
+   valid js at all» يمرّ. ولا يعرب إلا بلاحقة .mjs. فننسخ كل ملف
+   بلاحقتها ثم نُعربه — إعراباً حقيقياً بمحرّك V8 لا بالتخمين. */
+let syntax = [];
+try{
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sowra-parse-'));
+  for(const f of files){
+    const p = path.join(tmp, f.replace(/[\/]/g, '__').replace(/\.js$/, '.mjs'));
+    fs.writeFileSync(p, read(f));
+    try{ execFileSync(process.execPath, ['--check', p], { stdio:'pipe' }); }
+    catch(e){
+      const err = String(e.stderr || '').split('\n').find(l => /Error/.test(l)) || 'خطأ إعرابي';
+      const ln  = (String(e.stderr || '').match(/\.mjs:(\d+)/) || [,'?'])[1];
+      syntax.push(`${f}:${ln} — ${err.trim()}`);
+    }
+  }
+  fs.rmSync(tmp, { recursive:true, force:true });
+}catch(e){ syntax.push('تعذّر الإعراب — '+((e&&e.message)||e)); }
+
 /* ═══ التقرير ═══ */
 const ok = s => `\x1b[32m${s}\x1b[0m`, bad = s => `\x1b[31m${s}\x1b[0m`, warn = s => `\x1b[33m${s}\x1b[0m`;
 
@@ -169,6 +241,9 @@ let fails = 0;
 
 const line = (pass, label, extra='') =>
   console.log(`  ${pass ? ok('✅') : bad('❌')} ${label.padEnd(22)} ${extra}`);
+
+line(!syntax.length, 'إعراب الملفات', syntax.length || '');
+if(syntax.length){ fails++; syntax.forEach(s => console.log(`       ${s}`)); }
 
 line(!Object.keys(dupes).length, 'تعريفات مكرّرة', Object.keys(dupes).length || '');
 if(Object.keys(dupes).length){ fails++; for(const [k,v] of Object.entries(dupes)) console.log(`       ${k}: ${v.join(', ')}`); }
@@ -203,6 +278,12 @@ if(ghostIds.length){ fails++; console.log(`       ${ghostIds.join(', ')}`); }
 
 line(!rawPaths.length, 'مسار ملف محسوب يدوياً', rawPaths.length || '');
 if(rawPaths.length){ fails++; console.log(`       ${rawPaths.join(' · ')} — استعمل thumbPath/hiPath/allPaths`); }
+
+line(!mutedErrs.length, 'خطأ قاعدة مطموس', mutedErrs.length || '');
+if(mutedErrs.length){ fails++; console.log(`       ${mutedErrs.join(' · ')} — استعمل dbErr(الإجراء, error)`); }
+
+line(!staleGets.length, 'قيمة متغيّرة من الحاجز', staleGets.length || '');
+if(staleGets.length){ fails++; staleGets.forEach(s => console.log(`       ${s} — صدّر دالة قارئة واستعمل need`)); }
 
 console.log(`  ${big.length ? warn('⚠️') : ok('✅')} فوق ٤٠٠ سطر${' '.repeat(10)} ${big.length || ''}`);
 big.forEach(([f,n]) => console.log(`       ${f} — ${n}`));

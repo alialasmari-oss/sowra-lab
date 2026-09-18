@@ -181,7 +181,12 @@ if(badHits.length){ fails++; badHits.slice(0,8).forEach(([f,d,t]) => console.log
 
 line(!htmlMissing.length, 'onclick مفقودة', htmlMissing.length || '');
 if(htmlMissing.length){
-  const adm = htmlMissing.filter(n => n.startsWith('adm') || ['sendFeedback','plcFillCities'].includes(n));
+  /* «مؤجّلة للإشراف» تعني: زرّها داخل لوحة الإشراف، فلا يضرّ أن
+     تتأخّر مع وحدتها الكسولة. والمعيار موضع الزر لا اسم الملف.
+     كان sendFeedback مستثناةً هنا وهي بصفحة «رسائلي» التي يفتحها كل
+     زائر — فأخفى الاستثناءُ عطلاً حقيقياً شهوراً. لا يُضاف اسم لهذه
+     القائمة إلا بعد التأكد أن زرّه لا يظهر إلا للمشرف. */
+  const adm = htmlMissing.filter(n => n.startsWith('adm') || ['plcFillCities'].includes(n));
   const real = htmlMissing.filter(n => !adm.includes(n));
   if(adm.length) console.log(`       ${warn('⏳')} مؤجّلة للإشراف (${adm.length}): ${adm.slice(0,6).join(', ')}`);
   if(real.length){ fails++; console.log(`       ${bad('❌')} مفقودة: ${real.join(', ')}`); }

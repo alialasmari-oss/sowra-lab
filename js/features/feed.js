@@ -51,9 +51,97 @@ export async function loadPhotos(){
     .order('created_at',{ascending:false});
   if(error){$('feed').innerHTML=`<div class="empty"><span class="big">⚠️</span>تعذر تحميل الصور<br>${error.message}</div>`;return}
   state.photos = data || [];
+  _sig = sigOf(state.photos);
+  _lastFull = Date.now();
   try{await loadVisitCounts()}catch(e){}
   try{await loadClaims()}catch(e){}
   try{if(typeof state.viewMode!=='undefined'&&state.viewMode==='map'){renderMap()}else{render()}}catch(e){console.warn('render',e)}
+  watchPhotos();
+}
+
+/* ═══ القناة الحيّة ═══
+   سأل المالك: ولمَ لا نستعمل الحيّ؟ وكان محقاً — قاعدةُ سوبابيز تدفع
+   الجديد بنفسها، والمشروع لم يستعمل هذا الباب قطّ: لا sb.channel بحرفٍ
+   واحد. فكنّا نسأل كل دقيقتين عمّا تستطيع القاعدة أن تخبرنا به لحظته.
+
+   وهي هنا مُسرِّعٌ لا معتمَدٌ عليه — وهذا شرط سلامتها:
+     · إن لم تُفعَّل بإعدادات المشروع، أو انقطع الاتصال، أو رُفض
+       الاشتراك — لا ينكسر شيء، والسؤال الدوري يبقى شبكةَ أمانٍ تحته.
+     · لا نُصغي لـUPDATE إطلاقاً: عدّاد المشاهدات يُحدّث جدول الصور عند
+       كل فتحة، فالإصغاء له يعني سيلاً من الأحداث ونحن نهرب من السيل.
+       الإدراج والحذف وحدهما، وهما ما يهمّ الزائر.
+     · ولا نجلب عند كل حدث: خمسُ صورٍ تُرفع معاً تعني خمسة أحداث،
+       فنُمهل ثلاث ثوانٍ ثم نسأل سؤالاً واحداً رخيصاً. */
+let _ch = null, _burst = null;
+
+export function watchPhotos(){
+  if(_ch) return;
+  if(!sb || typeof sb.channel !== 'function') return;
+  try{
+    const hit = () => {
+      clearTimeout(_burst);
+      _burst = setTimeout(() => { refreshPhotos(); }, 3000);
+    };
+    _ch = sb.channel('sowra-photos')
+      .on('postgres_changes', {event:'INSERT', schema:'public', table:'photos'}, hit)
+      .on('postgres_changes', {event:'DELETE', schema:'public', table:'photos'}, hit)
+      .subscribe(st => {
+        if(st === 'SUBSCRIBED') console.info('[حيّ] القناة مفتوحة — الصور الجديدة تصل لحظتها');
+        else if(st === 'CHANNEL_ERROR' || st === 'TIMED_OUT')
+          console.warn('[حيّ] تعذّرت القناة ('+st+') — السؤال الدوري يغطّيها');
+      });
+  }catch(e){
+    console.warn('[حيّ] تعذّر الاشتراك — السؤال الدوري يغطّيها', e);
+    _ch = null;
+  }
+}
+
+/* ═══ التحديث الآليّ: نسأل قبل أن نجلب ═══
+   loadPhotos تجلب كل الصور بكل أعمدتها بلا حدّ. وهي محقّةٌ في ثمانية
+   عشر موضعاً تناديها بعد تغييرٍ فعليّ — نشرٍ أو تعديلٍ أو حذف.
+   لكن موضعين ينادياها بلا أن يتغيّر شيء: عند كل رجوعٍ للتطبيق من
+   الخلفية، وكل دقيقتين ما دام مفتوحاً. فمن تَرك تبويباً مفتوحاً ساعة
+   جلب الأرشيف كاملاً ثلاثين مرة، وهو نفسه لم يتغيّر.
+
+   فصار الآليّ يسأل أولاً بسؤالٍ رخيص: كم عدد الصور؟ وما أحدث تاريخ؟
+   الأول head:true فلا يعيد صفّاً واحداً — عدداً فقط. والثاني صفٌّ
+   واحد بعمودٍ واحد. فإن تطابقا مع ما عندنا فلا جديد ولا جلب.
+   ونُجبر جلبةً كاملة كل حينٍ على أي حال — انظر FULL_EVERY أدناه. */
+let _sig = '', _lastFull = 0;
+/* ═══ لماذا ساعة ═══
+   هذه الجلبة الإجبارية هي ٩٩٫٩٪ من الحمل المتبقي: ثلاث جلباتٍ كاملة
+   بالساعة عند ربع الساعة، مقابل ٢٧ سؤالاً مجموعها كيلوبايت.
+   وما تشتريه بها قليل: عدّاد 👁️ المشاهدات على البطاقة، وترتيب
+   الميداليات عند «الأعلى تقييماً»، ووسام اختيار المحررين لو مُنح
+   أثناء جلسة الزائر. أما الصور الجديدة والمحذوفة — وهي ما يهمّ —
+   فتصل بالقناة الحيّة لحظتها، وبالسؤال الدوري خلال دقيقتين.
+   ولا نُلغيها بالكامل: تبقى شبكةَ أمانٍ أخيرة لما لا تراه البصمة ولا
+   تدفعه القناة — صورةٌ يُخفيها الإشراف، أو عنوانٌ يُعدَّل. فإن سقط
+   الطريقان معاً، فساعةٌ تضمن الصحّة ولو متأخّرة. ثمنُها نصف ميغابايت
+   بالساعة بدل ميغا ونصف. */
+const FULL_EVERY = 60 * 60000;
+
+function sigOf(rows){
+  const newest = rows && rows.length ? (rows[0].created_at || '') : '';
+  return (rows ? rows.length : 0) + '|' + newest;
+}
+
+export async function refreshPhotos(){
+  /* لم نُحمّل بعد — لا بصمة نقارن بها */
+  if(!state.photos.length) return loadPhotos();
+  if(Date.now() - _lastFull > FULL_EVERY) return loadPhotos();
+  try{
+    /* نداءٌ واحد يعطينا الاثنين: العدد يأتي بالترويسة مع count:'exact'،
+       وأحدث تاريخ يأتي بالصفّ الواحد. كانا نداءين فصارا واحداً — لأن
+       عدد النداءات يهمّ حين يكون الزوار مئة. */
+    const r = await sb.from('photos_ranked')
+      .select('created_at', {count:'exact'})
+      .order('created_at',{ascending:false}).limit(1);
+    if(r.error) return loadPhotos();                /* عند الشكّ نجلب */
+    const sig = (r.count ?? 0) + '|' + ((r.data && r.data[0] && r.data[0].created_at) || '');
+    if(sig === _sig) return;                        /* لا جديد */
+  }catch(e){ return loadPhotos(); }
+  return loadPhotos();
 }
 
 /* ============ الفلاتر والعرض ============ */

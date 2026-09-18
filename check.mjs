@@ -177,6 +177,60 @@ try{
   }
 }catch(e){}
 
+/* ═══ إظهارٌ يفرض display على عنصرٍ له تخطيط بالأنماط ═══
+   قائمة الإشراف جُعلت شبكةً بالأنماط فبقيت بطاقةً واحدة بالسطر على
+   سطح المكتب — لأن admSetTab كتب style.display='block' سطرياً، والنمط
+   السطريّ يغلب الورقة كلها. أي أن «أظهِر العنصر» محا «رتّبه شبكةً».
+   القاعدة: الإظهار يُعاد بـ'' لا بـ'block' — فالفراغ يرجع العنصر لما
+   تقوله الورقة، و'block' يفرض رأياً لا يملكه. */
+let forcedDisp = [];
+try{
+  const css = fs.readFileSync('./style.css', 'utf8');
+  const laidOut = new Set();     /* معرّفات تقول عنها الورقة grid أو flex */
+  for(const m of css.matchAll(/#([A-Za-z][\w-]*)[^{}]*\{([^}]*)\}/g))
+    if(/display\s*:\s*(grid|flex|inline-flex|inline-grid)/.test(m[2])) laidOut.add(m[1]);
+  for(const f of files){
+    read(f).split('\n').forEach((ln, i) => {
+      for(const m of ln.matchAll(/\$\(\s*'([^']+)'\s*\)\s*\.style\.display\s*=[^;]*'block'/g))
+        if(laidOut.has(m[1])) forcedDisp.push(`${f}:${i+1} — #${m[1]}`);
+      for(const m of ln.matchAll(/getElementById\(\s*'([^']+)'\s*\)[^;]*\.style\.display\s*=\s*'block'/g))
+        if(laidOut.has(m[1])) forcedDisp.push(`${f}:${i+1} — #${m[1]}`);
+    });
+  }
+}catch(e){}
+
+/* ═══ بنية ملف الأنماط ═══
+   الفاحص كان يُعرب الجافاسكربت ولا يمسّ style.css — وهو ١١٢ كيلوبايت
+   في ملفٍ واحد يُرفع بالنسخ واللصق. وأكثر ما يصيب ملفاً كهذا: قوسٌ
+   ناقص، أو تعليقة لم تُغلق، أو نسخٌ مبتور في آخره. وكلها صامتة:
+   المتصفح يتجاهل ما بعد الكسر فتختفي أنماطٌ بلا رسالة خطأ واحدة. */
+let cssErrs = [];
+try{
+  const css = fs.readFileSync('./style.css', 'utf8');
+  const lineAt = i => css.slice(0, i).split('\n').length;
+  /* تعليقات غير مغلقة */
+  for(let i = css.indexOf('/*'); i > -1; i = css.indexOf('/*', i + 2)){
+    const end = css.indexOf('*/', i + 2);
+    if(end === -1){ cssErrs.push(`سطر ${lineAt(i)} — تعليقة لم تُغلق`); break; }
+    i = end;
+  }
+  /* توازن الأقواس */
+  const bare = css.replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '));
+  let depth = 0, opened = [];
+  for(let i = 0; i < bare.length; i++){
+    if(bare[i] === '{'){ depth++; opened.push(i); }
+    else if(bare[i] === '}'){
+      depth--; opened.pop();
+      if(depth < 0){ cssErrs.push(`سطر ${lineAt(i)} — قوس إغلاق زائد`); depth = 0; }
+    }
+  }
+  if(depth > 0) cssErrs.push(`سطر ${lineAt(opened[0])} — قوس فتح بلا إغلاق (الملف مبتور؟)`);
+  /* آخر الملف: لازم ينتهي بإغلاق لا بنصف قاعدة */
+  const tail = bare.trimEnd();
+  if(tail && !/[}\/]$/.test(tail))
+    cssErrs.push(`سطر ${lineAt(bare.trimEnd().length)} — الملف ينتهي بنصف قاعدة`);
+}catch(e){ cssErrs.push('تعذّر قراءة style.css — '+((e&&e.message)||e)); }
+
 /* ═══ خلفية فاتحة مثبّتة بلا غطاء ليلي ═══
    بنر لقطة الأسبوع كان خلفيته #FFF3CF مثبّتةً بالحجر ونصّه var(--txt).
    نهاراً: أسودُ على كريمي. ليلاً: --txt يصير #F0E8DA فيصبح أبيضَ على
@@ -331,6 +385,12 @@ if(rawPaths.length){ fails++; console.log(`       ${rawPaths.join(' · ')} — �
 
 line(!mutedErrs.length, 'خطأ قاعدة مطموس', mutedErrs.length || '');
 if(mutedErrs.length){ fails++; console.log(`       ${mutedErrs.join(' · ')} — استعمل dbErr(الإجراء, error)`); }
+
+line(!forcedDisp.length, 'إظهار يمحو تخطيط الأنماط', forcedDisp.length || '');
+if(forcedDisp.length){ fails++; forcedDisp.forEach(s => console.log(`       ${s} — أظهِر بـ'' لا بـ'block'`)); }
+
+line(!cssErrs.length, 'بنية ملف الأنماط', cssErrs.length || '');
+if(cssErrs.length){ fails++; cssErrs.forEach(s => console.log(`       ${s}`)); }
 
 line(!lightBg.length, 'خلفية فاتحة بلا وضع ليلي', lightBg.length || '');
 if(lightBg.length){ fails++; lightBg.forEach(s => console.log(`       ${s} — أضف قاعدة body.dark`)); }

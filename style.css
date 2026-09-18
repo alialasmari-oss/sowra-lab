@@ -128,8 +128,22 @@ nav{position:fixed;bottom:0;left:0;right:0;width:100%;z-index:30;background:var(
 .week-strip{margin:10px 18px 0;background:linear-gradient(135deg,#FFF3CF,#FFFDF5);border:2px solid var(--star);border-radius:16px;padding:16px 18px;font-size:15px;font-weight:500;text-align:center;cursor:pointer;color:var(--txt);box-shadow:0 3px 12px rgba(232,160,32,.22);animation:wpulse 2.6s ease-in-out infinite}
 @keyframes wpulse{0%,100%{box-shadow:0 3px 12px rgba(232,160,32,.22)}50%{box-shadow:0 3px 20px rgba(232,160,32,.45)}}
 .week-strip b{color:var(--sadu)}
+/* ═══ قوائم لوحة الإشراف على الشاشة الكبيرة ═══
+   الخلاصة العامة تتّسع ٢ ثم ٣ ثم ٤ أعمدة، أما قائمة الإشراف فبقيت
+   بطاقةً واحدة بعرض الشاشة مهما اتّسعت — فعلى سطح المكتب صورةٌ واحدة
+   في السطر وفراغٌ إلى جانبها، والمشرف يمرّر عشرات المرات ليرى ما كان
+   يسعه صفٌّ واحد. والبطاقة تحتها ثمانية أزرار فلا تُضغط لأربعة أعمدة
+   كالخلاصة — عمودان من ٧٠٠ وثلاثة من ١١٠٠ هو المتّسع. */
+#admList{display:grid;grid-template-columns:1fr;gap:12px;align-items:start}
+#admList .card{margin-bottom:0}
+@media(min-width:700px){#admList{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1100px){#admList{grid-template-columns:repeat(3,1fr)}}
+
 /* شبكة ترشيح لقطة الأسبوع (لوحة الإشراف) */
 .wk-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;margin-bottom:14px}
+/* على الشاشة العريضة كانت ١٢ خليّة بالصفّ — مربّعاتٌ لا تُميَّز فيها
+   صورةٌ من صورة، والمقصود أن يوازن المشرف بينها بالنظر */
+@media(min-width:700px){.wk-pick{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
 .wk-cell{position:relative;background:var(--card);border:2px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer}
 .wk-cell img{display:block;width:100%;aspect-ratio:1;object-fit:cover}
 .wk-cell.on{border-color:var(--star);box-shadow:0 0 0 2px rgba(232,160,32,.3)}

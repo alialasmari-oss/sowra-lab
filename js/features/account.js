@@ -91,6 +91,9 @@ export function accTab(m){
   if(ng)ng.style.display=m==='up'?'block':'none';
   if(pb)pb.style.display=m==='up'?'block':'none';
   if(ag)ag.textContent=m==='up'?'إنشاء الحساب':'دخول';
+  /* «نسيت كلمة السر» لا معنى لها في تبويب إنشاء حساب */
+  const fw=$('accForgotWrap');
+  if(fw)fw.style.display=m==='up'?'none':'';
 }
 
 export async function renderAccIn(){
@@ -135,6 +138,39 @@ export async function saveMyName(){
   const hi=$('accHello');if(hi)hi.textContent='هلا '+name;
   toast('انحفظت بياناتك ✅');
   try{await loadPhotos()}catch(e){}
+}
+
+/* ═══ نسيت كلمة السر ═══
+   لم يكن للمنصة بابٌ لاستعادتها إطلاقاً: من نسيها فقد حسابه وصوره
+   معه، وليس أمامه إلا أن يفتح حساباً جديداً باسمٍ جديد — وتبقى صوره
+   القديمة يتيمةً بلا صاحب. وليست حالةً نادرة: كل منصةٍ بكلمة سرّ
+   تحتاجها. سوبابيز يرسل رابط الاستعادة بنفسه، فلم ينقص إلا الزرّ.
+   redirectTo يرجع به إلى الصفحة نفسها فيكمل التعيين هناك. */
+export async function accForgot(){
+  const em=$('accEmail');
+  const email=em?em.value.trim():'';
+  if(!email){
+    toast('اكتب إيميلك بالخانة أول، ثم اضغط «نسيت كلمة السر»',true);
+    if(em)em.focus();
+    return;
+  }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
+    toast('الإيميل غير صحيح',true); if(em)em.focus(); return;
+  }
+  const lnk=$('accForgotBtn');
+  const was=lnk?lnk.textContent:'';
+  if(lnk){lnk.textContent='⏳ جاري الإرسال...';lnk.style.pointerEvents='none'}
+  try{
+    const back=location.origin+location.pathname;
+    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:back});
+    if(error)throw error;
+    /* لا نقول «الإيميل غير مسجّل» — تلك ثغرةٌ تكشف من له حساب بالمنصة */
+    toast('إن كان الإيميل مسجّلاً وصلك رابط الاستعادة 📧 — افحص البريد والمهملات');
+  }catch(e){
+    dbErr('إرسال رابط الاستعادة', e, 'تعذر الإرسال — جرّب بعد قليل');
+  }finally{
+    if(lnk){lnk.textContent=was||'🔑 نسيت كلمة السر؟';lnk.style.pointerEvents=''}
+  }
 }
 
 export async function accSubmit(){

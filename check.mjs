@@ -177,6 +177,36 @@ try{
   }
 }catch(e){}
 
+/* ═══ حقلٌ يُنشَر ولا يُصفَّر ═══
+   «أرشّح عمارة فتظهر صورة شجر» — والعلّة لم تكن بالمرشِّح بل بنموذج
+   الرفع: resetAddForm تمسح العنوان والوصف والوسوم ولا تمسّ قائمة
+   التصنيف. فمن رفع مبنىً واختار «عمارة» ثم رفع حديقةً بعده، وجد
+   القائمة على حالها — فخُزّنت الشجرة تحت العمارة. والنموذج هو من
+   اقترح الخطأ، لا الرافع.
+   القاعدة: كل حقل #a… يُقرأ عند النشر لازم يُذكَر في resetAddForm —
+   إمّا ليُصفَّر، وإمّا بسطرٍ يقول لماذا يبقى (كالمنطقة والمدينة). */
+let unreset = [];
+try{
+  const up = read('features/upload.js');
+  const body = (up.match(/function resetAddForm\(\)\{[\s\S]*?\n\}/) || [''])[0];
+  const published = new Set();
+  /* الحقول التي تُقرأ ساعة بناء صفّ النشر */
+  const row = (up.match(/function mediaRow\([\s\S]*?\n\}/) || [''])[0];
+  for(const m of row.matchAll(/\$\('(a[A-Za-z]\w*)'\)/g)) published.add(m[1]);
+  /* مذكورةٌ بالتصفير أو بتعليقةٍ تشرح بقاءها */
+  const mentioned = new Set();
+  for(const m of body.matchAll(/\$\('(a[A-Za-z]\w*)'\)/g)) mentioned.add(m[1]);
+  /* التعليقة السابقة للدالة وحدها — لا كل ما قبلها. الصيغة الكسولة
+     /\*[\s\S]*?\*\/ تبدأ من أول تعليقةٍ بالملف فتبتلع mediaRow نفسها،
+     فيبدو كل حقلٍ «مذكوراً» وتمرّ القاعدة على عطلها. جرّبناها فمرّت. */
+  const at  = up.indexOf('function resetAddForm');
+  const pre = at > -1 ? up.slice(Math.max(0, at - 1400), at) : '';
+  const why = (pre.match(/\/\*(?:(?!\*\/)[\s\S])*\*\/\s*$/) || [''])[0];
+  for(const m of why.matchAll(/\b(aRegion|aCity|aCat|aTitle|aVillage|aDesc|aComm)\b/g)) mentioned.add(m[1]);
+  for(const m of why.matchAll(/المنطقة|المدينة/g)) { mentioned.add('aRegion'); mentioned.add('aCity'); }
+  unreset = [...published].filter(id => !mentioned.has(id));
+}catch(e){}
+
 /* ═══ إظهارٌ يفرض display على عنصرٍ له تخطيط بالأنماط ═══
    قائمة الإشراف جُعلت شبكةً بالأنماط فبقيت بطاقةً واحدة بالسطر على
    سطح المكتب — لأن admSetTab كتب style.display='block' سطرياً، والنمط
@@ -385,6 +415,9 @@ if(rawPaths.length){ fails++; console.log(`       ${rawPaths.join(' · ')} — �
 
 line(!mutedErrs.length, 'خطأ قاعدة مطموس', mutedErrs.length || '');
 if(mutedErrs.length){ fails++; console.log(`       ${mutedErrs.join(' · ')} — استعمل dbErr(الإجراء, error)`); }
+
+line(!unreset.length, 'حقل نشرٍ بلا تصفير', unreset.length || '');
+if(unreset.length){ fails++; console.log(`       ${unreset.join(' · ')} — صفّره بـresetAddForm أو اكتب لماذا يبقى`); }
 
 line(!forcedDisp.length, 'إظهار يمحو تخطيط الأنماط', forcedDisp.length || '');
 if(forcedDisp.length){ fails++; forcedDisp.forEach(s => console.log(`       ${s} — أظهِر بـ'' لا بـ'block'`)); }

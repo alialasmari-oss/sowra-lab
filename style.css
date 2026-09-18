@@ -145,6 +145,11 @@ nav{position:fixed;bottom:0;left:0;right:0;width:100%;z-index:30;background:var(
 @media(min-width:700px){#admList{grid-template-columns:repeat(2,1fr)}}
 @media(min-width:1100px){#admList{grid-template-columns:repeat(3,1fr)}}
 
+/* شريط بحث الترشيح */
+.wk-tools{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
+@media(min-width:700px){.wk-tools{grid-template-columns:repeat(4,1fr)}
+  .wk-tools #wkQ,.wk-tools #wkReg{grid-column:auto}}
+
 /* شبكة ترشيح لقطة الأسبوع (لوحة الإشراف) */
 .wk-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;margin-bottom:14px}
 /* على الشاشة العريضة كانت ١٢ خليّة بالصفّ — مربّعاتٌ لا تُميَّز فيها

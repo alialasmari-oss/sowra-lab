@@ -137,6 +137,23 @@ try{
   ghostIds = [...used].filter(id => !defined.has(id));
 }catch(e){}
 
+/* ═══ ٨) مسارات ملفات الصورة تُحسب بمكان واحد ═══
+   لكل صورة ثلاثة ملفات: الأصل و_t و_h. كانت ثلاثة مواضع تحسب مسار
+   المصغّرة بنفسها بـreplace خام، فلما أضفنا نسخة الأرشيف كاد موضعان
+   ينسيانها: الحذف يترك ملفاً يتيماً للأبد، ومنظّف اليتامى يعدّ كل
+   نسخ الأرشيف نفاية ويمحوها. القاعدة: لا أحد يكتب _t أو _h بيده
+   خارج core/media.js — الجميع يمرّ بـthumbPath وhiPath وallPaths. */
+let rawPaths = [];
+try{
+  for(const f of files){
+    if(f === 'core/media.js') continue;
+    read(f).split('\n').forEach((ln, i) => {
+      if(/['"`]_[th]\.jpg['"`]|_[th]\.jpg['"`]\s*\)/.test(ln))
+        rawPaths.push(`${f}:${i+1}`);
+    });
+  }
+}catch(e){}
+
 /* ═══ التقرير ═══ */
 const ok = s => `\x1b[32m${s}\x1b[0m`, bad = s => `\x1b[31m${s}\x1b[0m`, warn = s => `\x1b[33m${s}\x1b[0m`;
 
@@ -178,6 +195,9 @@ if(bodyClassErr){ fails++; console.log(`       ${bodyClassErr}`); }
 
 line(!ghostIds.length, 'عنصر مستدعى ومفقود', ghostIds.length || '');
 if(ghostIds.length){ fails++; console.log(`       ${ghostIds.join(', ')}`); }
+
+line(!rawPaths.length, 'مسار ملف محسوب يدوياً', rawPaths.length || '');
+if(rawPaths.length){ fails++; console.log(`       ${rawPaths.join(' · ')} — استعمل thumbPath/hiPath/allPaths`); }
 
 console.log(`  ${big.length ? warn('⚠️') : ok('✅')} فوق ٤٠٠ سطر${' '.repeat(10)} ${big.length || ''}`);
 big.forEach(([f,n]) => console.log(`       ${f} — ${n}`));

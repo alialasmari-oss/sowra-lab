@@ -3,7 +3,7 @@
 
 import { sb } from '../core/db.js';
 import { need } from '../core/hub.js';
-import { $, esc, toast } from '../core/ui.js';
+import { $, dbErr, esc, toast } from '../core/ui.js';
 import { geo, COORDS, REGION_CENTER, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
 
 /* ═══ عبر الحاجز ═══
@@ -53,7 +53,7 @@ export async function admDelPlace(id,name){
   if(!needEditor('إدارة الأماكن'))return;
   if(!confirm(`حذف «${name}» من القوائم؟ (الصور المنشورة عليه ما تتأثر)`))return;
   const { error } = await sb.from('custom_places').delete().eq('id',id);
-  if(error){toast('تعذر الحذف',true);return}
+  if(error){dbErr('حذف المكان',error);return}
   toast('انحذف المكان');
   await loadPlaces();renderPlaces();
 }

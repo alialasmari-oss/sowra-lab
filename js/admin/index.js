@@ -5,7 +5,7 @@ import { currentUser, sb } from '../core/db.js';
 import { get, need } from '../core/hub.js';
 import { imgUrl } from '../core/media.js';
 import { isCurator, isEditor, isOwner, state } from '../core/state.js';
-import { $, esc, toast } from '../core/ui.js';
+import { $, dbErr, esc, toast } from '../core/ui.js';
 import { geo, COORDS, REGION_CENTER, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
 const _ADM_ROLES_ = () => get('ADM_ROLES');
 const loadCommercial = need('loadCommercial');
@@ -146,6 +146,21 @@ export function admSetTab(t){
 
 export let CW=null;
 
+/* ═══ لماذا دالة وليست القيمة نفسها ═══
+   admin/contest.js كان يقرأ المسابقة بـget('CW') — والحاجز يسجّل
+   ما يُعطى له بـObject.assign، وهذا ينسخ قيمة الارتباط لحظة التسجيل
+   لا الارتباط نفسه. والتسجيل يجري وقت تحميل وحدة الإشراف، وCW حينها
+   null دائماً، ويظلّ null بالسجلّ للأبد ولو أسندنا له ألف مرة بعدها.
+   فكان _CW_() يعيد undefined، فكل زر يلمس المسابقة معطوب:
+     · «تفعيل للجمهور» ينهار على undefined.active — وهي رسالة الخطأ
+       التي يراها المشرف
+     · «حفظ البيانات» يسقط شرط التحديث فيُدرج مسابقة جديدة كل مرة
+     · «الترشيح» يقول «أنشئ المسابقة أول» وهي منشأة
+     · «إنهاء» و«إزالة» يستعلمان contest_id=undefined
+   والدالة تُنسخ بمرجعها فتقرأ الارتباط الحيّ عند كل نداء — هذا هو
+   الفرق بين get(قيمة) وneed(دالة) بالحاجز. */
+export const getCW = () => CW;
+
 export async function loadAdmWeek(){
   $('admWk').innerHTML='<div class="empty">⏳</div>';
   const c=await sb.from('weekly_contest').select('*').order('id',{ascending:false}).limit(1).maybeSingle();
@@ -220,7 +235,7 @@ export function admRender(){
 
 export async function admClear(id){
   const { error } = await sb.from('reports').delete().eq('photo_id',id);
-  if(error){toast('فشلت العملية',true);return}
+  if(error){dbErr('مسح البلاغات',error);return}
   toast('مُسحت البلاغات');
   await openAdmin();
 }

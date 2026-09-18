@@ -4,7 +4,7 @@
 import { sb } from '../core/db.js';
 import { need } from '../core/hub.js';
 import { state } from '../core/state.js';
-import { $, esc, prompt, toast } from '../core/ui.js';
+import { $, dbErr, esc, prompt, toast } from '../core/ui.js';
 import { geo, COORDS, REGION_CENTER, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
 
 /* ═══ عبر الحاجز ═══
@@ -100,7 +100,7 @@ export async function qCreate(){
 
 export async function qToggle(id,cur){
   const {error}=await sb.from('quests').update({active:!cur}).eq('id',id);
-  if(error){toast('فشلت العملية',true);return}
+  if(error){dbErr('تفعيل الرحلة',error);return}
   toast(!cur?'الرحلة نشطة 🗝️':'اتوقفت الرحلة');loadAdmQuests();
 }
 

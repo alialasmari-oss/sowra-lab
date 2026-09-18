@@ -5,7 +5,7 @@ import { sb } from '../core/db.js';
 import { need } from '../core/hub.js';
 import { compressTo } from '../core/media.js';
 import { isOwner, reelsState, state } from '../core/state.js';
-import { $, esc, toast } from '../core/ui.js';
+import { $, dbErr, esc, toast } from '../core/ui.js';
 import { geo, COORDS, REGION_CENTER, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
 
 /* ═══ عبر الحاجز ═══
@@ -74,7 +74,7 @@ export async function admMaintToggle(){
 
 export async function admMaintSaveMsg(){
   const {error}=await sb.from('site_banner').update({maintenance_msg:$('mtMsg').value.trim()}).eq('id',1);
-  if(error){toast('فشل الحفظ',true);return}
+  if(error){dbErr('حفظ الرسالة',error);return}
   toast('انحفظت الرسالة ✅');
 }
 

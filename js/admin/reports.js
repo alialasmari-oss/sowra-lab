@@ -6,7 +6,7 @@ import { checkText } from '../core/format.js';
 import { need } from '../core/hub.js';
 import { allPaths } from '../core/media.js';
 import { isOwner, state } from '../core/state.js';
-import { $, esc, prompt, toast } from '../core/ui.js';
+import { $, dbErr, esc, prompt, toast } from '../core/ui.js';
 import { geo, COORDS, REGION_CENTER, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
 
 /* ═══ عبر الحاجز ═══
@@ -89,14 +89,14 @@ export async function fbReply(id){
 
 export async function fbDone(id){
   const { error } = await sb.from('feedback').update({status:'done'}).eq('id',id);
-  if(error){toast('فشلت العملية',true);return}
+  if(error){dbErr('تعليم الرسالة',error);return}
   loadFb();
 }
 
 export async function fbDel(id){
   if(!confirm('حذف الرسالة نهائياً؟'))return;
   const { error } = await sb.from('feedback').delete().eq('id',id);
-  if(error){toast('فشل الحذف',true);return}
+  if(error){dbErr('حذف الرسالة',error);return}
   loadFb();
 }
 
@@ -138,7 +138,7 @@ export async function admDel(id,path){
   const it=(state.admPhotos||[]).find(x=>x.id===id)||state.photos.find(x=>x.id===id);
   const isVid=it&&it.media_type==='video';
   const { error } = await sb.from('photos').delete().eq('id',id);
-  if(error){toast('فشل الحذف',true);return}
+  if(error){dbErr('حذف البلاغ',error);return}
   try{
     if(isVid) await sb.storage.from('videos').remove([path]);
     else await sb.storage.from('photos').remove(allPaths(path));   /* المصغّرة والأرشيف معاً */
@@ -151,7 +151,7 @@ export async function admBan(uid,ban){
   if(!needOwner('حظر المستخدمين'))return;
   if(ban&&!confirm('حظر المصور؟ لن يستطيع النشر أو التعليق.'))return;
   const { error } = await sb.from('profiles').update({banned:ban}).eq('id',uid);
-  if(error){toast('فشلت العملية',true);return}
+  if(error){dbErr('الحظر',error);return}
   toast(ban?'تم حظر المصور ⛔':'فُك الحظر');
   await openAdmin();
 }

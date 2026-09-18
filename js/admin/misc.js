@@ -5,7 +5,7 @@ import { sb } from '../core/db.js';
 import { need } from '../core/hub.js';
 import { thumbUrl } from '../core/media.js';
 import { state } from '../core/state.js';
-import { $, esc, toast } from '../core/ui.js';
+import { $, dbErr, esc, toast } from '../core/ui.js';
 import { geo, COORDS, REGION_CENTER, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
 
 /* ═══ عبر الحاجز ═══
@@ -55,7 +55,7 @@ export async function muUpload(){
 
 export async function muToggle(id,cur){
   const {error}=await sb.from('music').update({active:!cur}).eq('id',id);
-  if(error){toast('فشلت العملية',true);return}
+  if(error){dbErr('تفعيل المقطع',error);return}
   toast(!cur?'المقطع متاح 🎵':'اختفى المقطع');
   loadAdmMusic();
 }

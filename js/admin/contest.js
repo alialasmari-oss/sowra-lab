@@ -2,12 +2,14 @@
    المسابقة والراعي والتحدي */
 
 import { sb } from '../core/db.js';
-import { get, need } from '../core/hub.js';
+import { need } from '../core/hub.js';
 import { compressTo, imgUrl } from '../core/media.js';
 import { state } from '../core/state.js';
-import { $, esc, toast } from '../core/ui.js';
+import { $, dbErr, esc, toast } from '../core/ui.js';
 import { geo, COORDS, REGION_CENTER, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
-const _CW_ = () => get('CW');
+/* المسابقة الحالية — دالة حيّة من admin/index.js لا قيمة منسوخة.
+   (التفصيل عند getCW هناك) */
+const _CW_ = need('getCW');
 
 /* ═══ عبر الحاجز ═══
    loadAdmWeek ← admin/index.js
@@ -58,14 +60,14 @@ export async function admSpUpload(f){
   const up=await sb.storage.from('photos').upload(path,blob,{contentType:'image/jpeg',cacheControl:'31536000'});
   if(up.error){toast('فشل الرفع: '+up.error.message,true);return}
   const {error}=await sb.from('site_banner').update({image_path:path,sponsor_name:$('spName').value.trim(),sponsor_cat:$('spCat').value.trim(),sponsor_lat:parseFloat($('spLat').value)||null,sponsor_lng:parseFloat($('spLng').value)||null,sponsor_deal:$('spDeal').value.trim(),sponsor_code:$('spCode').value.trim(),updated_at:new Date().toISOString()}).eq('id',1);
-  if(error){toast('فشل الحفظ',true);return}
+  if(error){dbErr('رفع بنر الراعي',error);return}
   toast('ارتفع البنر ✅ — فعّله متى ما جهزت');
   await loadAdmWeek();loadSponsor();
 }
 
 export async function admSpSaveLink(){
   const {error}=await sb.from('site_banner').update({link_url:$('spLink').value.trim(),sponsor_name:$('spName').value.trim(),sponsor_cat:$('spCat').value.trim(),sponsor_lat:parseFloat($('spLat').value)||null,sponsor_lng:parseFloat($('spLng').value)||null,sponsor_deal:$('spDeal').value.trim(),sponsor_code:$('spCode').value.trim()}).eq('id',1);
-  if(error){toast('فشل الحفظ',true);return}
+  if(error){dbErr('حفظ بيانات الراعي',error);return}
   toast('انحفظ الرابط ✅');loadSponsor();
 }
 
@@ -73,7 +75,7 @@ export async function admSpToggle(){
   if(!needEditor('بنر الراعي'))return;
   const b=state.banner;
   const {error}=await sb.from('site_banner').update({active:!b.active}).eq('id',1);
-  if(error){toast('فشلت العملية',true);return}
+  if(error){dbErr('تفعيل بنر الراعي',error);return}
   toast(b.active?'اختفى البنر':'انطلق البنر برأس الصفحة 📣');
   await loadAdmWeek();loadSponsor();
 }
@@ -89,7 +91,7 @@ export async function admWeekSave(){
 export async function admWeekToggle(){
   if(!needEditor('المسابقة'))return;
   const {error}=await sb.from('weekly_contest').update({active:!_CW_().active}).eq('id',_CW_().id);
-  if(error){toast('فشلت العملية',true);return}
+  if(error){dbErr('تفعيل لقطة الأسبوع',error);return}
   toast(_CW_().active?'أُوقفت المسابقة':'انطلقت المسابقة للجمهور 🎉');
   await loadAdmWeek();await loadWeek();
 }
@@ -122,7 +124,7 @@ export async function admWeekEnd(){
 
 export async function admWeekNew(){
   const {error}=await sb.from('weekly_contest').insert({active:false});
-  if(error){toast('تعذر الإنشاء',true);return}
+  if(error){dbErr('إنشاء مسابقة جديدة',error);return}
   toast('مسابقة جديدة جاهزة للتجهيز ✨');
   await loadAdmWeek();
 }
@@ -133,7 +135,7 @@ export async function admSpDelete(){
   if(!confirm('حذف بنر الراعي نهائياً؟ الصورة تنمسح من المخزن والإعدادات تتصفّر.'))return;
   if(b.image_path)await sb.storage.from('photos').remove([b.image_path]).catch(()=>{});
   const {error}=await sb.from('site_banner').update({active:false,image_path:'',link_url:''}).eq('id',1);
-  if(error){toast('فشل الحذف',true);return}
+  if(error){dbErr('حذف بنر الراعي',error);return}
   toast('انحذف البنر نهائياً 🗑️');
   await loadAdmWeek();loadSponsor();
 }
@@ -161,7 +163,7 @@ export async function admSponsorsBtnToggle(){
   if(!needEditor('صفحة الرعاة'))return;
   const b=state.banner;
   const{error}=await sb.from('site_banner').update({sponsors_btn:!b.sponsors_btn}).eq('id',1);
-  if(error){toast('فشلت العملية',true);return}
+  if(error){dbErr('زر الرعاة',error);return}
   toast(!b.sponsors_btn?'زر الرعاة ظاهر 🤝':'اختفى الزر');
   await loadAdmWeek();await loadSponsor();
 }
@@ -241,7 +243,7 @@ export async function admChToggle(){
   const c=window.__CH||{};
   if(!c.active&&!$('chTitle').value.trim()){toast('اكتب موضوع التحدي أولاً',true);return}
   const {error}=await sb.from('challenge').update({active:!c.active}).eq('id',1);
-  if(error){toast('فشلت العملية',true);return}
+  if(error){dbErr('تفعيل تحدي الأسبوع',error);return}
   toast(!c.active?'التحدي نشط 🎯':'اتوقف التحدي');
   await loadChallenge();await loadAdmWeek();
 }

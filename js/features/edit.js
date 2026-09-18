@@ -64,7 +64,7 @@ export function openEdit(pid){
   if(dg)dg.style.display=isV?'none':'block';
   if($('edDesc'))$('edDesc').value=p.description||'';
   if($('edCat'))$('edCat').value=p.category||'other';
-  $('edLabel').innerHTML=(isV?'عدّل عنوان المقطع':'عدّل عنوان الصورة ووصفها')
+  $('edLabel').innerHTML=(isV?'عدّل بيانات المقطع':'عدّل بيانات الصورة — العنوان والوصف والتصنيف والموقع')
     +(_mine?'':'<div style="font-size:11px;color:var(--sadu);font-weight:700;margin-top:5px">🛡️ تعديل إداري — صورة '+esc(p.photographer||'عضو')+'</div>');
   state.edTrTitle=p.title_en||'';state.edTrDesc=p.description_en||'';
   const pv=$('edTrPreview');

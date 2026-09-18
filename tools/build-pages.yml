@@ -1,0 +1,60 @@
+name: توليد صفحة لكل صورة
+
+# تعمل يدوياً، وكل ست ساعات لالتقاط الصور الجديدة.
+# لا تحتاج أي سرّ: المفتاح المستعمل هو مفتاح النشر العام نفسه
+# الموجود بشيفرة التطبيق، ولا يقرأ إلا ما هو عام أصلاً.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 */6 * * *'
+
+permissions:
+  contents: write
+
+concurrency:                    # يمنع تداخل نسختين تكتبان بالمستودع معاً
+  group: build-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: تحديد الموقع والمسار
+        id: site
+        run: |
+          # مستودع بـCNAME يخدم من نطاقه الخاص بلا مسار فرعي،
+          # وغيره يخدم من <owner>.github.io/<repo>. نكتشفها بلا إعدادات.
+          if [ -f CNAME ]; then
+            echo "site=https://$(tr -d '[:space:]' < CNAME)" >> $GITHUB_OUTPUT
+            echo "base=" >> $GITHUB_OUTPUT
+          else
+            echo "site=https://${GITHUB_REPOSITORY%%/*}.github.io" >> $GITHUB_OUTPUT
+            echo "base=/${GITHUB_REPOSITORY#*/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: التوليد
+        env:
+          SITE: ${{ steps.site.outputs.site }}
+          BASE: ${{ steps.site.outputs.base }}
+        run: |
+          echo "الموقع: $SITE$BASE"
+          node tools/gen-pages.mjs
+
+      - name: الحفظ بالمستودع
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add p sitemap.xml robots.txt
+          if git diff --staged --quiet; then
+            echo "لا جديد — الصفحات مطابقة لما بالمستودع"
+          else
+            git commit -m "توليد صفحات الصور وخريطة الموقع"
+            git push
+            echo "تم الحفظ ✅"
+          fi

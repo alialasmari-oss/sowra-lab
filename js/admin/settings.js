@@ -121,9 +121,18 @@ export async function admSetReels(reelsMode){
   const {error}=await sb.from('site_banner').update(vals).eq('id',1);
   if(error){toast('تعذرت العملية: '+error.message,true);return}
 
-  ['banner','__SPB'].forEach(function(k){
-    if(window[k]){window[k].video_enabled=vals.video_enabled;window[k].reels_soon=vals.reels_soon}
-  });
+  /* ═══ لماذا كانت تحتاج ضغطتين ═══
+     كان هنا حلقةٌ على اسمَي متغيّرين عامّين من عهد ما قبل الوحدات
+     تكتب فيهما إن وُجدا — ولا وجود لهما اليوم،
+     فالشرط كاذبٌ دائماً والجسم لا يعمل أبداً. والحالة الحقيقية في
+     state.banner فتبقى قديمة.
+     ثم تُنادى loadAdmWeek لإعادة الرسم، وهي تجمع قطع اللوحة بالترتيب:
+     admReelsBlock() تُقرأ قبل await admSpBlock()، وadmSpBlock وحدها
+     هي التي تُحدّث state.banner من القاعدة. فالرسمة الأولى تُبنى على
+     الحالة القديمة — يرى المالك زرّه كما كان — ثم تُحدَّث الحالة بعد
+     فوات الرسم. فإن ضغط ثانيةً ظهر الأثر، وهو أثر الضغطة الأولى.
+     والقاعدة كانت صحيحةً من أول ضغطة، والخلل بالعرض وحده. */
+  state.banner = Object.assign(state.banner || {}, vals);
 
   const msg={off:'انطفأت الأضواء',soon:'◐ وضع «قريباً» مفعّل',open:'🎬 الأضواء مفتوحة للجميع'}[reelsMode];
   toast(msg);

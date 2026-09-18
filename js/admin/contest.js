@@ -233,7 +233,7 @@ export function admChallengeBlock(){
     <div style="font-weight:700;font-size:14px;margin-bottom:6px">🎯 تحدي الأسبوع <span style="font-size:11px;font-weight:700;color:${on?'var(--qblue)':'var(--txt-dim)'}">${on?'● نشط':'○ مطفأ'}</span></div>
     <input id="chTitle" placeholder="موضوع التحدي (مثال: الأبواب القديمة)" value="${esc(c.title||'')}" style="width:100%;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 13px;color:var(--txt);font-family:'Tajawal';font-size:13px;outline:none;margin-bottom:8px">
     <input id="chHint" placeholder="وصف أو تلميح (اختياري)" value="${esc(c.hint||'')}" style="width:100%;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 13px;color:var(--txt);font-family:'Tajawal';font-size:13px;outline:none;margin-bottom:8px">
-    <input id="chEnds" type="date" value="${c.ends_at||''}" style="width:100%;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 13px;color:var(--txt);font-family:'Tajawal';font-size:13px;outline:none;margin-bottom:8px">
+    <input id="chEnds" type="date" value="${c.ends_at||''}" style="width:100%;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 13px;color:var(--txt);font-family:'Tajawal';font-size:13px;outline:none;margin-bottom:8px;direction:ltr;text-align:left">
     <div style="font-size:11.5px;color:var(--txt-dim);margin:10px 0 6px">توجيه التحدي (اختياري)</div>
     <div style="display:flex;gap:8px;margin-bottom:8px">
       <select id="chRegion" style="flex:1;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px;color:var(--txt);font-family:'Tajawal';font-size:12.5px;outline:none">

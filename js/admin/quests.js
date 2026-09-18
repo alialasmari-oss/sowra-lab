@@ -41,7 +41,7 @@ export async function loadAdmQuests(){
       <input id="qSponsor" placeholder="الراعي (اختياري)" style="flex:1;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 13px;color:var(--txt);font-family:'Tajawal';font-size:13px;outline:none">
       <input id="qPrize" placeholder="الجائزة" style="flex:1;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 13px;color:var(--txt);font-family:'Tajawal';font-size:13px;outline:none">
     </div>
-    <input id="qEnds" type="date" style="width:100%;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 13px;color:var(--txt);font-family:'Tajawal';font-size:13px;outline:none;margin-bottom:8px">
+    <input id="qEnds" type="date" style="width:100%;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 13px;color:var(--txt);font-family:'Tajawal';font-size:13px;outline:none;margin-bottom:8px;direction:ltr;text-align:left">
     <button class="btn" style="width:100%" onclick="qCreate()">➕ إنشاء الرحلة</button>
   </div>
   ${ADMQ.length?ADMQ.map(q=>{

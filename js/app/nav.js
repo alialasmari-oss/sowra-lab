@@ -27,6 +27,7 @@ const loadWeek = need('loadWeek');
 const loadSponsor = need('loadSponsor');
 const loadChallenge = need('loadChallenge');
 const initHero = need('initHero');
+const openSheet = need('openSheet');
 const showNearby = need('showNearby');
 const ensurePos = need('ensurePos');
 const startNearWatch = need('startNearWatch');
@@ -335,6 +336,22 @@ export async function boot(){
     /* الأماكن والقوائم بُنيت بـmain.js — نكتفي بالصور */
     await loadPhotos();
     loadWeek(); loadSponsor(); loadChallenge();
+    /* ═══ قادم من صفحة صورة؟ ═══
+       صفحات p/<id>.html تُنهي زرّها بـ?p=<id>. بدون هذا يصل الزائر
+       من قوقل أو واتساب إلى الخلاصة العامة ويضيع عنه ما جاء لأجله.
+       نفتح الورقة مباشرة، ثم ننظّف الرابط حتى لا تُعاد بالتحديث. */
+    try{
+      const pid = parseInt(new URLSearchParams(location.search).get('p'), 10);
+      if(pid && typeof openSheet === 'function'){
+        setTimeout(() => {
+          try{
+            openSheet(pid);
+            history.replaceState({}, document.title, location.pathname);
+          }catch(e){ console.warn('[رابط] تعذّر فتح الصورة', pid, e); }
+        }, 120);
+      }
+    }catch(e){}
+
     initHero();
     showNearby();
     /* متابعة الموقع لتنبيه المرور — تحترم مفتاحها بنفسها */

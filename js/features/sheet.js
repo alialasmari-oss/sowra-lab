@@ -35,6 +35,7 @@ const renderVault = need('renderVault');
 const renderVisits = need('renderVisits');
 const setView = need('setView');
 const shareCard = need('shareCard');
+const sharePhoto = need('sharePhoto');
 /* ═══ عبر الحاجز ═══
    tagName ← features/upload.js
 */
@@ -132,7 +133,9 @@ export async function openSheet(id){
     if(lc)lc.innerHTML+='<br><span style="font-size:12px;color:var(--txt-dim)">🎵 '+esc(p.music_key)+'</span>';
   }
   const shb=$('shareBtn');
-  if(shb)shb.onclick=function(){shareCard(p)};
+  if(shb)shb.onclick=function(){shareCard(p)};       /* بطاقة صورة بلا رابط — الافتراضي */
+  const cdb=$('cardBtn');
+  if(cdb)cdb.onclick=function(){sharePhoto(p)};      /* نسخ الرابط لمن طلبه */
   const dbw=$('deleteBtn');
   if(dbw){
     const isMine=!!(currentUser() && p.user_id===currentUser()?.id);

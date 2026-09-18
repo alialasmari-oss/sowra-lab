@@ -172,6 +172,10 @@ export async function shareProfile(uid){
    الصور. هذه تبني رابط صفحة الصورة التي يولّدها tools/gen-pages.mjs،
    ومنها تُقرأ وسوم og: فتظهر الصورة وعنوانها بالمعاينة.
    والمسار يُشتقّ من موقع الصفحة نفسها فيعمل باللاب وبالإنتاج معاً. */
+export function photoUrlShort(id){
+  return photoUrl(id).replace(/^https?:\/\//, '').replace(/\.html$/, '');
+}
+
 export function photoUrl(id){
   try{
     const u = new URL(window.location.href);
@@ -179,6 +183,26 @@ export function photoUrl(id){
     return `${u.origin}${dir}/p/${id}.html`;
   }catch(e){
     return 'https://sowra.app/p/' + id + '.html';
+  }
+}
+
+/* ═══ مشاركة الصورة برابطها ═══
+   كانت المشاركة ترسل بطاقةً كملف ومعها الرابط نصّاً عارياً تحتها،
+   فيظهر بالواتساب سطرٌ طويل قبيح لا يليق بصورة جميلة.
+
+   السبب أن واتساب لا يولّد معاينة لرسالة فيها ملف مرفق — يعرض الملف
+   ثم النص كما هو. أما إرسال الرابط وحده فيقرأ واتساب وسوم og: من
+   صفحة الصورة ويبني بنفسه بطاقة أنيقة: الصورة وعنوانها ووصفها
+   بفقاعة واحدة قابلة للضغط. وهذه الوسوم صارت عندنا.
+
+   فالرابط لم يعد «تحت الصورة» — صار هو الصورة. */
+export async function sharePhoto(p){
+  const url = photoUrl(p.id);
+  try{
+    await navigator.clipboard.writeText(url);
+    toast('اننسخ الرابط 🔗');
+  }catch(e){
+    toast(url);
   }
 }
 
@@ -253,15 +277,20 @@ export async function shareCard(p){
     const cx2=W/2+(qr2?70:0);
     ctx.fillStyle='#D63A2F';
     ctx.font='bold 50px Tajawal, sans-serif';
-    ctx.fillText('صورة من بلدي',cx2,ih+165);
+    ctx.fillText('صورة من بلدي',cx2,ih+152);
 
+    /* عنوان الصورة نفسها لا اسم الموقع العام: البطاقة تُرسل وحدها
+       بلا رابط، فهذا السطر هو الباب الوحيد لمن أراد أن يصل إليها.
+       «sowra.app/p/82» يُقرأ ويُكتب بيسر. */
     ctx.fillStyle='#241F1C';
-    ctx.font='bold 36px Tajawal, sans-serif';
-    ctx.fillText('sowra.app',cx2,ih+212);
+    ctx.font='bold 34px Tajawal, sans-serif';
+    ctx.fillText(photoUrlShort(p.id),cx2,ih+196);
 
+    /* كان السطر عند ih+250 = ١٣٦٠ والبطاقة ارتفاعها ١٣٥٠ — أي أنه
+       يُرسم خارج اللوحة فيُقصّ. ظهر بالمعاينة لا بقراءة الشيفرة. */
     ctx.fillStyle='#6B6259';
-    ctx.font='26px Tajawal, sans-serif';
-    ctx.fillText('عدسات أهل الديار',cx2,ih+250);
+    ctx.font='25px Tajawal, sans-serif';
+    ctx.fillText('عدسات أهل الديار',cx2,ih+232);
 
     cv.toBlob(async function(blob){
       if(!blob){toast('تعذر إنشاء البطاقة',true);return}
@@ -271,7 +300,7 @@ export async function shareCard(p){
           await navigator.share({
             files:[file],
             title:p.title,
-            text:p.title+' — من «صورة من بلدي» 📸\n'+photoUrl(p.id)
+            text:p.title+' — من «صورة من بلدي» 📸'   /* بلا رابط — بطلب المالك */
           });
           return;
         }catch(e){}

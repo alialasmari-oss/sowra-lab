@@ -87,9 +87,13 @@ export function renderWeek(){
   const winId=results?(WEEK.winner_photo_id??(sorted[0]?.id)):(sorted[0]&&(state.weekVotes[sorted[0].id]||0)>0?sorted[0].id:null);
   $('weekBody').innerHTML=state.weekEntries.length?sorted.map((p,i)=>{
     const v=state.weekVotes[p.id]||0, isWin=p.id===winId;
+    /* الضغط على الصورة يفتح ورقتها الكاملة — التكبير والعنوان والمصوّر
+       والمكان والتقييم والتعليقات. فالزائر يُحكّم بالنظر لا بالمربّع
+       الصغير، ثم يرجع فيصوّت. وهي ورقةٌ قائمة أصلاً، لا نبني غيرها. */
     return `<div class="card wcard ${isWin&&results?'winner':''} ${state.myWeekVote===p.id&&!results?'voted':''}">
-      <div class="ph" style="height:170px"><img src="${thumbUrl(p.image_path)}" onerror="this.onerror=null;this.src='${imgUrl(p.image_path)}'" alt="${esc(p.title)}">
+      <div class="ph" style="height:170px;cursor:zoom-in" onclick="openSheet(${p.id})" title="اضغط للتكبير والتفاصيل"><img src="${thumbUrl(p.image_path)}" onerror="this.onerror=null;this.src='${imgUrl(p.image_path)}'" alt="${esc(p.title)}">
         ${isWin?'<div class="medal">👑 '+(results?'الفائز':'متصدرة')+'</div>':(results?`<div class="medal">#${i+1}</div>`:'')}
+        <span class="w-zoom">🔍</span>
       </div>
       <div class="card-body">
         <div class="card-title">${esc(p.title)}</div>

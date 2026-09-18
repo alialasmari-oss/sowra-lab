@@ -231,7 +231,11 @@ export function admRender(){
   $('admList').innerHTML=list.map(p=>{
     const rc=state.admReps[p.id]||0;
     return `<div class="card" style="margin-bottom:12px;cursor:default">
-      <div class="ph" style="height:150px"><img src="${imgUrl(p.image_path)}" loading="lazy"></div>
+      <!-- كانت imgUrl: الصورة الأصلية كاملةً لكل صفٍّ بالقائمة. فعند
+           مئة صورة تُنزَّل مئة صورة كاملة عند كل فتحةٍ للترس، وعند ألفٍ
+           ألف. وهي تُعرض في مربّعٍ صغير لا يحتاج عُشر ذلك.
+           thumbUrl المصغّرة، وimgUrl احتياطٌ لصورةٍ قديمة بلا مصغّرة. -->
+      <div class="ph sq" style="cursor:zoom-in" onclick="openSheet(${p.id})" title="اضغط للتكبير"><img src="${thumbUrl(p.image_path)}" onerror="this.onerror=null;this.src='${imgUrl(p.image_path)}'" loading="lazy" alt="${esc(p.title)}"></div>
       <div class="card-body">
         <div class="card-title">#${p.id} · ${esc(p.title)}</div>
         <div class="card-meta" style="margin-bottom:8px"><span>📷 ${p.profiles?.display_name||'?'} · 📍 ${p.city}</span></div>

@@ -365,4 +365,23 @@ export async function sendFeedback(){
   if(typeof logRate==='function')logRate('message');
   $('fbBody').value='';
   toast('وصلت رسالتك للإدارة، شكراً لك 🙏');
+
+  /* ═══ إشعار الإدارة ═══
+     كانت الدالة تُدرج الرسالة وتقول للمرسِل «وصلت» وتنتهي — والإدارة
+     لا تعلم حتى تفتح اللوحة بنفسها. وطريقا البلاغ والردّ يُشعران،
+     فكان الاقتراح وحده منسيّاً.
+     to:'admins' تجعل وظيفة smart-service تجلب المشرفين بمفتاح الخدمة
+     من طرف الخادم — فلا يحتاج الزائر قراءة جدول admins. */
+  try{
+    const KIND = {suggestion:'💡 اقتراح', complaint:'⚠️ شكوى',
+                  question:'❓ استفسار', other:'📝 رسالة'};
+    const nm = (await sb.from('profiles').select('display_name')
+                 .eq('id', currentUser()?.id).maybeSingle()).data?.display_name || 'عضو';
+    pushNotify({
+      title: (KIND[kind] || '📨 رسالة') + ' جديد',
+      body: nm + ': ' + body.slice(0, 90) + (body.length > 90 ? '…' : ''),
+      url: '/',
+      to: 'admins'
+    });
+  }catch(e){ console.warn('[رسالة] تعذّر إشعار الإدارة', e); }
 }

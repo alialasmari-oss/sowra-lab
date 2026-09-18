@@ -76,11 +76,16 @@ export async function notifyRating(pid){
     const r=await sb.from('ratings').select('stars').eq('photo_id',pid);
     const list=(r.data||[]).map(x=>x.stars);
     const n=list.length;
-    if(![3,10,25,50].includes(n))return;
+    /* كانت [3,10,25,50]: صاحب الصورة لا يسمع شيئاً إن توقّف المقيّمون
+       عند اثنين — وهو حال أغلب الصور بمنصة ناشئة. أول تقييم أهم
+       لحظة له، فأضفنا العتبة ١. */
+    if(![1,3,10,25,50].includes(n))return;
     const avg=(list.reduce((s,x)=>s+x,0)/n).toFixed(1);
+    /* «1 تقييماً» ركيك، وصار يظهر الآن بأول تقييم — وهو أول ما يقرؤه المصوّر */
+    const cnt = n===1?'تقييم واحد' : n===2?'تقييمان' : n<=10?n+' تقييمات' : n+' تقييماً';
     pushNotify({
       title:'⭐ صورتك نالت '+avg,
-      body:'«'+ph.title+'» — '+n+' تقييماً حتى الآن',
+      body:'«'+ph.title+'» — '+cnt+' حتى الآن',
       url:'/',
       user_ids:[ph.user_id]
     });
@@ -154,6 +159,25 @@ export async function addComment(){
   $('cText').value='';
   const cm=await sb.from('comments').select('body,created_at,profiles!user_id(display_name)').eq('photo_id',state.curId).order('created_at');
   state.curPhoto._comments=cm.data||[];renderComments();
+
+  /* ═══ إشعار صاحب الصورة ═══
+     كان التعليق يُدرج ويُرسم وينتهي — فلا يعلم صاحب الصورة بتعليقٍ
+     عليها إلا إن رجع إليها بنفسه. والتعليق أثمن تفاعل بالمنصة لأنه
+     يفتح حواراً، فبلا إشعارٍ يموت الحوار قبل أن يبدأ.
+     بالخلفية: لا ننتظره ولا نُفشل التعليق إن تعثّر. */
+  try{
+    const ph=state.curPhoto;
+    if(ph && ph.user_id && currentUser() && ph.user_id!==currentUser()?.id){
+      const nm=(await sb.from('profiles').select('display_name')
+                  .eq('id',currentUser()?.id).maybeSingle()).data?.display_name || 'أحدهم';
+      pushNotify({
+        title:'💬 تعليق جديد على صورتك',
+        body:nm+': '+t.slice(0,80)+(t.length>80?'…':''),
+        url:'./?p='+ph.id,   /* نسبي — يصحّ باللاب وبالإنتاج معاً */
+        user_ids:[ph.user_id]
+      });
+    }
+  }catch(e){ console.warn('[تعليق] تعذّر الإشعار', e); }
 }
 
 /* تحديث بيانات صورة واحدة من العرض المجمّع */

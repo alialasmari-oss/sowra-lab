@@ -6,7 +6,7 @@ import { checkText, rankOf, timeAgo } from '../core/format.js';
 import { need } from '../core/hub.js';
 import { imgUrl, thumbUrl, vidUrl } from '../core/media.js';
 import { isOwner, state } from '../core/state.js';
-import { $, esc, toast } from '../core/ui.js';
+import { $, dbErr, esc, toast } from '../core/ui.js';
 import { geo, COORDS, REGION_CENTER, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
 
 /* ═══ عبر الحاجز ═══
@@ -61,7 +61,7 @@ export function drawStars(){
 export async function rate(n){
   const prev=state.myRating;state.myRating=n;drawStars();
   const { error } = await sb.from('ratings').upsert({photo_id:state.curId,user_id:currentUser()?.id,stars:n});
-  if(error){state.myRating=prev;drawStars();toast('تعذر حفظ التقييم',true);return}
+  if(error){state.myRating=prev;drawStars();dbErr('حفظ التقييم',error,'تعذر حفظ التقييم');return}
   $('thanks').style.display='block';
   await refreshOne();
   notifyRating(state.curId);
@@ -106,7 +106,7 @@ export async function voteBadge(k){
   }else{
     state.myBadgeSet.add(k);renderPoll();
     const { error } = await sb.from('badge_votes').insert({photo_id:state.curId,user_id:currentUser()?.id,badge_key:k});
-    if(error){state.myBadgeSet.delete(k);renderPoll();toast('تعذر التصويت',true);return}
+    if(error){state.myBadgeSet.delete(k);renderPoll();dbErr('تصويت الوسام',error,'تعذر التصويت');return}
   }
   await refreshOne();
 }
@@ -154,7 +154,7 @@ export async function addComment(){
   const lim=await checkRate('comment');
   if(lim){toast(lim,true);return}
   const { error } = await sb.from('comments').insert({photo_id:state.curId,user_id:currentUser()?.id,body:t});
-  if(error){toast('تعذر إرسال التعليق',true);return}
+  if(error){dbErr('إرسال التعليق',error,'تعذر إرسال التعليق');return}
   logRate('comment');
   $('cText').value='';
   const cm=await sb.from('comments').select('body,created_at,profiles!user_id(display_name)').eq('photo_id',state.curId).order('created_at');

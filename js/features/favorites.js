@@ -6,7 +6,7 @@ import { checkText, rankOf } from '../core/format.js';
 import { need } from '../core/hub.js';
 import { avatarUrl, imgUrl, thumbUrl, vidUrl } from '../core/media.js';
 import { state } from '../core/state.js';
-import { $, esc, toast } from '../core/ui.js';
+import { $, dbErr, esc, toast } from '../core/ui.js';
 import { geo, COORDS, REGION_CENTER, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
 
 /* ═══ عبر الحاجز ═══
@@ -159,7 +159,7 @@ export async function moveToVault(pid){
   const _isVm=_mv&&_mv.media_type==='video';
   if(!confirm(_isVm?'سحب المقطع لخزنتك؟ ما راح يشوفه أحد غيرك.':'سحبها لخزنتك؟ ما راح يشوفها أحد غيرك.'))return;
   const {error}=await sb.from('photos').update({visibility:'private'}).eq('id',pid).eq('user_id',currentUser()?.id);
-  if(error){toast('تعذر السحب',true);return}
+  if(error){dbErr('سحب المفضلة',error,'تعذر السحب');return}
   toast(_isVm?'انسحب المقطع لخزنتك 🔒':'انسحبت لخزنتك 🔒');
   // نحدّث الحالة محلياً فوراً
   if(_mv)_mv.visibility='private';

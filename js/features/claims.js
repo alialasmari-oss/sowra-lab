@@ -6,7 +6,7 @@ import { checkText } from '../core/format.js';
 import { need } from '../core/hub.js';
 import { imgUrl, thumbUrl } from '../core/media.js';
 import { isOwner, state } from '../core/state.js';
-import { $, esc, prompt, toast } from '../core/ui.js';
+import { $, dbErr, esc, prompt, toast } from '../core/ui.js';
 import { geo, COORDS, REGION_CENTER, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
 
 /* ═══ من التنقل — عبر الحاجز ═══ */
@@ -130,7 +130,7 @@ export async function claimVote(cid,stance,pid){
 export async function claimDelete(cid){
   if(!confirm('سحب السبق؟ سيختفي مع كل الأصوات.'))return;
   const {error}=await sb.from('claims').delete().eq('id',cid);
-  if(error){toast('تعذر السحب',true);return}
+  if(error){dbErr('سحب المطالبة',error,'تعذر السحب');return}
   toast('انسحب السبق');
   await loadClaims();
   if(state.curPhoto)renderClaim(state.curPhoto);

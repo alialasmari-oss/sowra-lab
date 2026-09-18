@@ -6,7 +6,7 @@ import { rankOf } from '../core/format.js';
 import { need } from '../core/hub.js';
 import { imgUrl, thumbUrl } from '../core/media.js';
 import { state } from '../core/state.js';
-import { $, esc, toast } from '../core/ui.js';
+import { $, dbErr, esc, toast } from '../core/ui.js';
 import { geo, COORDS, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
 const shootThere = need('shootThere');
 
@@ -102,7 +102,7 @@ export function renderWeek(){
 
 export async function voteWeek(pid){
   const {error}=await sb.from('weekly_votes').upsert({contest_id:WEEK.id,user_id:currentUser()?.id,photo_id:pid});
-  if(error){toast('تعذر التصويت',true);return}
+  if(error){dbErr('تصويت لقطة الأسبوع',error,'تعذر التصويت');return}
   state.myWeekVote=pid;
   const bd=await sb.from('weekly_board').select('*').eq('contest_id',WEEK.id);
   state.weekVotes={};(bd.data||[]).forEach(r=>state.weekVotes[r.photo_id]=r.votes);

@@ -5,7 +5,7 @@ import { currentUser, isAnon, sb } from '../core/db.js';
 import { checkText, timeAgo } from '../core/format.js';
 import { need } from '../core/hub.js';
 import { isEditor, state } from '../core/state.js';
-import { $, esc, prompt, toast } from '../core/ui.js';
+import { $, dbErr, esc, prompt, toast } from '../core/ui.js';
 import { geo, COORDS, REGION_CENTER, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
 
 /* ═══ عبر الحاجز ═══
@@ -315,7 +315,7 @@ export async function toggleDmOpen(cb){
   if(isAnon())return;
   const v=!!cb.checked;
   const {error}=await sb.from('profiles').update({dm_open:v}).eq('id',currentUser()?.id);
-  if(error){toast('تعذر الحفظ',true);cb.checked=!v;return}
+  if(error){dbErr('حفظ التفضيل',error,'تعذر الحفظ');cb.checked=!v;return}
   toast(v?'صرت تستقبل الرسائل ✉️':'أقفلت الرسائل 🔕');
 }
 

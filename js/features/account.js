@@ -5,7 +5,7 @@ import { currentUser, isAnon, sb, session } from '../core/db.js';
 import { checkText } from '../core/format.js';
 import { need } from '../core/hub.js';
 import { state } from '../core/state.js';
-import { $, esc, prompt, toast } from '../core/ui.js';
+import { $, dbErr, esc, prompt, toast } from '../core/ui.js';
 import { geo, COORDS, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
 
 /* ═══ عبر الحاجز ═══
@@ -131,7 +131,7 @@ export async function saveMyName(){
   const rg=$('accRegion');if(rg)upd.region=rg.value.trim();
   const bo=$('accBio');if(bo)upd.bio=bo.value.trim();
   const { error } = await sb.from('profiles').update(upd).eq('id',currentUser()?.id);
-  if(error){toast('تعذر الحفظ',true);return}
+  if(error){dbErr('حفظ الحساب',error,'تعذر الحفظ');return}
   const hi=$('accHello');if(hi)hi.textContent='هلا '+name;
   toast('انحفظت بياناتك ✅');
   try{await loadPhotos()}catch(e){}

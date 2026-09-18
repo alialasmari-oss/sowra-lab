@@ -6,7 +6,7 @@ import { checkText, rankOf } from '../core/format.js';
 import { need } from '../core/hub.js';
 import { avatarUrl, imgUrl, thumbUrl, vidUrl } from '../core/media.js';
 import { state } from '../core/state.js';
-import { $, esc, toast } from '../core/ui.js';
+import { $, dbErr, esc, toast } from '../core/ui.js';
 import { geo, COORDS, REGION_CENTER, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
 
 /* ═══ عبر الحاجز ═══
@@ -179,7 +179,7 @@ export async function toggleFollow(uid,isF){
   if(isF){await sb.from('follows').delete().eq('follower_id',currentUser()?.id).eq('followed_id',uid);}
   else{
     const{error}=await sb.from('follows').insert({follower_id:currentUser()?.id,followed_id:uid});
-    if(error){toast('تعذرت المتابعة',true);return}
+    if(error){dbErr('المتابعة',error,'تعذرت المتابعة');return}
     toast('صرت متابعاً 👥');
   }
   await refreshOne();

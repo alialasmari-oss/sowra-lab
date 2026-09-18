@@ -6,7 +6,7 @@ import { checkText } from '../core/format.js';
 import { need } from '../core/hub.js';
 import { imgUrl, thumbUrl } from '../core/media.js';
 import { isOwner, state } from '../core/state.js';
-import { $, esc, prompt, toast } from '../core/ui.js';
+import { $, dbErr, esc, prompt, toast } from '../core/ui.js';
 import { geo, COORDS, REGION_CENTER, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
 
 /* ═══ من التنقل — عبر الحاجز ═══ */
@@ -114,7 +114,7 @@ export async function saveVisitNote(pid){
   const badV=checkText(t);
   if(badV){toast(badV,true);return}
   const {error}=await sb.from('visits').update({note:t}).eq('photo_id',pid).eq('user_id',currentUser()?.id);
-  if(error){toast('تعذر الحفظ',true);return}
+  if(error){dbErr('حفظ انطباع الزيارة',error,'تعذر الحفظ');return}
   toast('انحفظ انطباعك ✅');
   renderVisits(state.curPhoto);
 }

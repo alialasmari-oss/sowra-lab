@@ -4,7 +4,7 @@
 import { currentUser, isAnon, sb } from '../core/db.js';
 import { checkText, rankOf, timeAgo } from '../core/format.js';
 import { need } from '../core/hub.js';
-import { imgUrl, thumbUrl, vidUrl } from '../core/media.js';
+import { imgUrl, thumbUrl, vidUrl, allPaths } from '../core/media.js';
 import { isOwner, state } from '../core/state.js';
 import { $, esc, toast } from '../core/ui.js';
 import { geo, COORDS, REGION_CENTER, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
@@ -180,7 +180,7 @@ export async function deleteMyPhoto(pid,path){
   const isVid=ph&&ph.media_type==='video';
   try{
     if(isVid) await sb.storage.from('videos').remove([path]);
-    else await sb.storage.from('photos').remove([path,path.replace('.jpg','_t.jpg')]);
+    else await sb.storage.from('photos').remove(allPaths(path));   /* المصغّرة والأرشيف معاً */
   }catch(e){}
   const {error}=await sb.from('photos').delete().eq('id',pid).eq('user_id',currentUser()?.id);
   if(error){toast('تعذر الحذف: '+error.message,true);return}

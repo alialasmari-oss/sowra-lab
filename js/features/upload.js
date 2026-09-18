@@ -5,7 +5,7 @@ import { currentUser, isAnon, sb } from '../core/db.js';
 import { checkText, findOpt } from '../core/format.js';
 import { liveLocation, readExifGPS, readExifGPS2, reverseGeo, validPos } from '../core/geo.js';
 import { need } from '../core/hub.js';
-import { compress, compressTo, thumbPath, thumbUrl } from '../core/media.js';
+import { compress, compressTo, thumbPath, thumbUrl, hiPath, allPaths, makeHi, imgSize, HI_MIN, SIZES } from '../core/media.js';
 import { state, videoAllowed } from '../core/state.js';
 import { $, esc, toast } from '../core/ui.js';
 import { geo, COORDS, REGION_CENTER, nearestCity, loadPlaces, BASE_GEO } from '../data/places.js';
@@ -262,6 +262,33 @@ async function afterPublish(msg, sortMode){
   go('feed');
 }
 
+/* ═══ حفظ نسخة الأرشيف — بالخلفية، صامتة، لا تُفشل النشر ═══
+   تُنادى بعد نجاح تسجيل الصورة. لا await لها: المصوّر يرى «انرفعت»
+   فوراً بينما ترفع هي وراءه. وفشلها لا يضرّ — الصورة منشورة وسليمة،
+   والأرشيف وحده هو ما يفوت، وcleanup بالإشراف تستطيع تعويضه لاحقاً. */
+export async function saveHiCopy(srcFile, path){
+  try{
+    if(!srcFile || !path) return false;
+    const dim = await imgSize(srcFile);
+    /* الصورة الصغيرة أصلاً: النسخة العادية قريبة منها فلا نضاعف التخزين */
+    if(!dim || Math.max(dim.w, dim.h) < HI_MIN){
+      console.info('[أرشيف] تُخطّت — المصدر '+(dim? dim.w+'×'+dim.h : 'مجهول')+' دون الحد '+HI_MIN);
+      return false;
+    }
+    const hi = await makeHi(srcFile);
+    if(!hi) return false;
+    const up = await sb.storage.from('photos').upload(hiPath(path), hi, {
+      contentType:'image/jpeg', cacheControl:'31536000'
+    });
+    if(up.error){ console.warn('[أرشيف] تعذّر الرفع —', up.error.message); return false; }
+    console.info('[أرشيف] حُفظت '+hiPath(path)+' · '+Math.round(hi.size/1024)+' كيلو');
+    return true;
+  }catch(e){
+    console.warn('[أرشيف] استثناء —', (e&&e.message)||e);
+    return false;
+  }
+}
+
 export async function addPhoto(){
   if(isAnon()){toast('سجّل أول عشان تنشر 📸');openAcc();return}
   const title=$('aTitle').value.trim();
@@ -347,9 +374,14 @@ export async function addPhoto(){
     })).select('id').maybeSingle();
     if(ins.error){
       // فشل التسجيل — ننظف ملفات الصورة من المخزن حتى لا تبقى يتيمة
-      await sb.storage.from('photos').remove([path,thumbPath(path)]).catch(()=>{});
+      await sb.storage.from('photos').remove(allPaths(path)).catch(()=>{});
       throw ins.error;
     }
+    /* ═══ نسخة الأرشيف ═══
+       بعد نجاح التسجيل، وبالخلفية: لا ننتظرها ولا نُبطئ النشر على
+       المصوّر. كنا نضغط كل رفعة إلى ١١٠٠ ونرمي الأصل، أي نتلف عمله
+       بلا رجعة. هذه تحفظ ٢٤٠٠ للطباعة والخلفيات وما يأتي. */
+    saveHiCopy(state.pendingFile, path);
     // السبق على الموقع إن سُجّل
     try{
       const cp=$('clPlace'), cr=$('clReason');

@@ -374,6 +374,31 @@ try{
     passKey.push('index.html — الحارس لا يكتب sowra_pass');
   if(!/sessionStorage\.getItem\(\s*["']sowra_pass["']\s*\)\s*===\s*["']1["']/.test(h))
     passKey.push('index.html — الحارس لا يقرأ sowra_pass');
+
+  /* ═══ والقفل لا يُخمَّن ═══
+     كان الإعفاء بـ?pass=1 — كلمةٌ ثابتة في صفحةٍ عامة يقرؤها الجميع.
+     فيُشترَط أن تُقارَن بصمةٌ مُعمّاة، وأن يُنتزَع الإعفاء من ?admin=1
+     فلا يبقى في الصفحة إذنٌ مكتوبٌ صريحاً. */
+  if(!/crypto\.subtle\.digest/.test(h))
+    passKey.push('index.html — الإعفاء بلا بصمةٍ مُعمّاة');
+  if(!/mt_key_sha/.test(h))
+    passKey.push('index.html — الحارس لا يسأل عن mt_key_sha');
+  /* ⚠️ الصياغة الأولى كانت: if(/indexOf\("pass=1"/.test(h)) — أي بحثٌ عن
+     هجاءٍ واحدٍ للعطل لا عن صفته. فأعدتُ العطل بصياغةٍ أخرى
+     (arg("pass")==="1") فبقيت القاعدة خضراء، وكشفه الفحص السلوكي
+     وحده. فصارت تفحص الصفة: كلُّ منحٍ للإعفاء لا بدّ أن يكون داخل
+     فرع مقارنة البصمة — وإلا فهو منحٌ بكلمةٍ مكتوبةٍ في صفحةٍ عامة. */
+  const hl = h.split('\n');
+  hl.forEach((ln, i) => {
+    if(!/sessionStorage\.setItem\(\s*["']sowra_pass["']/.test(ln)) return;
+    const win = hl.slice(Math.max(0,i-6), i+1).join('\n');
+    if(!/bsm\(|crypto\.subtle|=== *String\(sha\)/.test(win))
+      passKey.push(`index.html:${i+1} — إعفاءٌ يُمنَح خارج مقارنة البصمة`);
+  });
+  /* ?admin=1 يمنح open_admin فقط، ولا يمسّ إعفاء الستارة */
+  for(const ln of h.split('\n'))
+    if(/admin=1/.test(ln) && /sowra_pass/.test(ln))
+      passKey.push('index.html — ?admin=1 يعفي من الستارة');
 }catch(e){}
 
 /* ═══ خطأ إعرابي — أول الفحوص وأهمّها ═══

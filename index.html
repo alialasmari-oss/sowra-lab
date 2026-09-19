@@ -21,24 +21,45 @@
    وتعيش عمر التبويب فتبقى مع كل تنقّلٍ وتحديثٍ داخله.
 
    ═══ ووظيفةٌ واحدة لكل رابط ═══
-   ?pass=1  → يعفيك من الستارة فقط، بلا لوحةٍ وبلا رسالة
-   ?admin=1 → يعفيك ويفتح اللوحة لمن يملكها
+   ?pass=<سرّك> → يعفيك من الستارة فقط، بلا لوحةٍ وبلا رسالة
+   ?admin=1     → نيّةُ فتح اللوحة، ولا يعفي من الستارة إطلاقاً
+   ?leave=1     → يتنازل عن الإعفاء فترى الستارة كالزائر (للاختبار)
    كانا مجتمعين في ?admin=1، فيفشل فتحُ اللوحة لغير المشرف فتظهر
    «يحتاج صلاحية أعلى» — رسالةٌ عن اللوحة يظنّها الناظر عن الستارة،
-   فيحسب الإعفاء فاشلاً وقد نجح. */
+   فيحسب الإعفاء فاشلاً وقد نجح.
+
+   ═══ ولماذا صار المفتاح سرّاً مُعمّىً لا كلمةً تُخمَّن ═══
+   كان الإعفاء بـ?pass=1 — أي أنّ من خمّن خمسة أحرفٍ رفع اللافتة.
+   ولا يملك التجاوزُ صلاحيةً (الخادم وحده يحكم بـRLS وجدول admins،
+   ولا يمنح index.html صفةً لأحد)، لكنّ الصيانة قد تكون والتطبيقُ
+   نصفَ مرفوع، فيدخل زائرٌ على حالٍ مشوّهة أو يرفع في لحظة هجرة.
+
+   فصار المفتاح سرّاً تختاره أنت، ولا يُخزَّن في الصفحة ولا يُرسَل
+   إليها: في الصفّ عمودٌ mt_key_sha يحمل بصمة SHA-256 للسرّ لا السرَّ
+   نفسه. والحارس يبصم ما كُتب بالرابط ويقارن البصمتين. فمن قرأ الصفّ
+   بمفتاح anon — وهو مقروءٌ للجميع بطبعه — لم ينل إلا بصمةً لا تُعكَس.
+   وتغييرُ السرّ سطرُ SQL، لا تعديلَ ملفٍ ولا نشرَ نسخة.
+
+   والسقوط مقصود: إن لم يوجد العمود بعد، يرجع الحارس لسؤال
+   maintenance وحده — فالستارة تعمل قبل الترحيل وبعده، ولا تُترك
+   فجوةٌ تُلغى فيها الستارة بصمتٍ لأن عموداً ناقص. */
 (function(){
   var U="https://gquzjaxpqeggknhipmzk.supabase.co", K="sb_publishable_BNp6Fg3VLXa1Pf4V6QjncQ_f496PquX";
+  var H={apikey:K,Authorization:"Bearer "+K};
+  function arg(n){
+    var m=new RegExp("[?&]"+n+"=([^&]*)").exec(location.search);
+    return m?decodeURIComponent(m[1].replace(/\+/g," ")):null;
+  }
 
-  /* ١. إذن صاحب الموقع — أوّلُ ما يُفحَص، ولا يعتمد على جلسةٍ ولا قاعدة */
-  try{
-    var q=location.search;
-    if(q.indexOf("pass=1")>-1||q.indexOf("admin=1")>-1) sessionStorage.setItem("sowra_pass","1");
-    if(q.indexOf("admin=1")>-1) sessionStorage.setItem("open_admin","1");
-    if(q.indexOf("pass=0")>-1) sessionStorage.removeItem("sowra_pass");   /* للاختبار: يرى الستارة كالزائر */
-  }catch(e){}
+  /* ١. تنازلٌ مقصود عن الإعفاء */
+  try{ if(arg("leave")!==null) sessionStorage.removeItem("sowra_pass"); }catch(e){}
+  /* نيّةُ فتح اللوحة — لا علاقة لها بالستارة، وnav.js وحده يقرّر */
+  try{ if(arg("admin")==="1") sessionStorage.setItem("open_admin","1"); }catch(e){}
+
+  /* ٢. إعفاءٌ ثبت بهذا التبويب من سرٍّ صحيحٍ قبلُ */
   try{ if(sessionStorage.getItem("sowra_pass")==="1") return; }catch(e){}
 
-  /* ٢. عودة من تسجيل دخول خارجي (جوجل) — لا تخطفها الستارة.
+  /* ٣. عودة من تسجيل دخول خارجي (جوجل) — لا تخطفها الستارة.
      الإعفاء مشروط بعلامة وُضعت بهذا المتصفح قبل المغادرة، فلا يكفي
      أن يكتب أحدهم ?code= بالرابط ليتجاوز الستارة. */
   try{
@@ -50,17 +71,42 @@
     }
   }catch(e){}
 
-  /* ٣. مشرفٌ ثبتت صفته بهذا الجهاز من دخولٍ سابق */
+  /* ٤. مشرفٌ ثبتت صفته بهذا الجهاز من دخولٍ ناجح */
   try{ if(localStorage.getItem("sowra_admin")==="1") return; }catch(e){}
+
   var de=document.documentElement;
   de.style.visibility="hidden";
   var shown=false, show=function(){ if(!shown){ shown=true; de.style.visibility=""; } };
-  setTimeout(show,1500);
-  fetch(U+"/rest/v1/site_banner?id=eq.1&select=maintenance",{headers:{apikey:K,Authorization:"Bearer "+K}})
-    .then(function(r){return r.json()})
-    .then(function(d){
-      if(d&&d[0]&&d[0].maintenance===true){ location.replace("maintenance.html"); }
-      else { show(); }
+  setTimeout(show,2500);   /* انقطاعُ شبكةٍ لا يحجب أحداً */
+
+  function bsm(s){
+    return crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)).then(function(b){
+      return Array.prototype.map.call(new Uint8Array(b),function(x){
+        return ("0"+x.toString(16)).slice(-2);
+      }).join("");
+    });
+  }
+
+  function ask(cols){
+    return fetch(U+"/rest/v1/site_banner?id=eq.1&select="+cols,{headers:H})
+      .then(function(r){ if(!r.ok) throw 0; return r.json() })
+      .then(function(d){ return (d&&d[0])||{} });
+  }
+
+  ask("maintenance,mt_key_sha")
+    .catch(function(){ return ask("maintenance") })   /* العمود لم يُضَف بعد */
+    .then(function(row){
+      if(row.maintenance!==true){ show(); return }
+      var want=arg("pass"), sha=row.mt_key_sha;
+      if(!want||!sha){ location.replace("maintenance.html"); return }
+      return bsm(want).then(function(h){
+        if(h===String(sha).toLowerCase()){
+          try{ sessionStorage.setItem("sowra_pass","1") }catch(e){}
+          show();
+        }else{
+          location.replace("maintenance.html");
+        }
+      });
     })
     .catch(show);
 })();
@@ -92,7 +138,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@400;600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0"></script>
 <script src="leaflet.js?x=m1.0"></script>
-<link rel="stylesheet" href="style.css?x=m2.6">
+<link rel="stylesheet" href="style.css?x=m2.7">
 <link rel="stylesheet" href="leaflet.css?x=m1.0">
 </head>
 <body class="page-feed">
@@ -879,9 +925,9 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
-  <script type="module" src="js/main.js?x=m2.6"></script>
+  <script type="module" src="js/main.js?x=m2.7"></script>
 </body>
 </html>
-  <script type="module" src="js/main.js?x=m2.6"></script>
+  <script type="module" src="js/main.js?x=m2.7"></script>
 </body>
 </html>

@@ -4,10 +4,41 @@
 <meta charset="UTF-8">
 
 <script>
-/* حارس الصيانة — يعمل قبل رسم الصفحة */
+/* حارس الصيانة — يعمل قبل رسم الصفحة
+
+   ═══ مفتاح الستارة: خانةٌ لا يملكها إلا هذا الحارس ═══
+   كان المفتاح يُخزَّن في localStorage.sowra_admin — وهي خانةُ صفةِ
+   الإشراف، يكتبها ويمحوها checkAdmin في account.js:
+       state.isAdmin ? setItem('sowra_admin') : removeItem('sowra_admin')
+   فمن فتح ?admin=1 وهو غير مسجَّل الدخول: يعفيه الحارس، ثم يمحو
+   checkAdmin مفتاحه بعد ثانية. فيعيش الإعفاء تحميلةً واحدة، ثم تُقفل
+   الستارة على المالك داخل موقعه ولا مخرج.
+   وبينهما فرقٌ في المعنى لا في الاسم: «صفة الإشراف» حكمٌ يقرّره
+   الخادم، و«الإذن بتجاوز الستارة» قرارٌ يتّخذه صاحب الموقع بجهازه.
+   فلا يصحّ أن يُستودَعا خانةً واحدة.
+   فصار للستارة مفتاحها: sessionStorage.sowra_pass — لا يقرؤها ولا
+   يكتبها إلا هذا الحارس (وقاعدةٌ في check.mjs تمنع سواه من لمسها)،
+   وتعيش عمر التبويب فتبقى مع كل تنقّلٍ وتحديثٍ داخله.
+
+   ═══ ووظيفةٌ واحدة لكل رابط ═══
+   ?pass=1  → يعفيك من الستارة فقط، بلا لوحةٍ وبلا رسالة
+   ?admin=1 → يعفيك ويفتح اللوحة لمن يملكها
+   كانا مجتمعين في ?admin=1، فيفشل فتحُ اللوحة لغير المشرف فتظهر
+   «يحتاج صلاحية أعلى» — رسالةٌ عن اللوحة يظنّها الناظر عن الستارة،
+   فيحسب الإعفاء فاشلاً وقد نجح. */
 (function(){
   var U="https://gquzjaxpqeggknhipmzk.supabase.co", K="sb_publishable_BNp6Fg3VLXa1Pf4V6QjncQ_f496PquX";
-  /* عودة من تسجيل دخول خارجي (جوجل) — لا تخطفها الستارة.
+
+  /* ١. إذن صاحب الموقع — أوّلُ ما يُفحَص، ولا يعتمد على جلسةٍ ولا قاعدة */
+  try{
+    var q=location.search;
+    if(q.indexOf("pass=1")>-1||q.indexOf("admin=1")>-1) sessionStorage.setItem("sowra_pass","1");
+    if(q.indexOf("admin=1")>-1) sessionStorage.setItem("open_admin","1");
+    if(q.indexOf("pass=0")>-1) sessionStorage.removeItem("sowra_pass");   /* للاختبار: يرى الستارة كالزائر */
+  }catch(e){}
+  try{ if(sessionStorage.getItem("sowra_pass")==="1") return; }catch(e){}
+
+  /* ٢. عودة من تسجيل دخول خارجي (جوجل) — لا تخطفها الستارة.
      الإعفاء مشروط بعلامة وُضعت بهذا المتصفح قبل المغادرة، فلا يكفي
      أن يكتب أحدهم ?code= بالرابط ليتجاوز الستارة. */
   try{
@@ -19,17 +50,8 @@
     }
   }catch(e){}
 
-  var isAdm=false;
-  try{ isAdm=localStorage.getItem("sowra_admin")==="1"; }catch(e){}
-  /* مفتاح احتياطي: sowra.app/?admin=1 — يتجاوز الستارة ويثبّت الصلاحية */
-  try{
-    if(location.search.indexOf("admin=1")>-1){
-      localStorage.setItem("sowra_admin","1");
-      isAdm=true;
-      sessionStorage.setItem("open_admin","1");
-    }
-  }catch(e){}
-  if(isAdm) return;
+  /* ٣. مشرفٌ ثبتت صفته بهذا الجهاز من دخولٍ سابق */
+  try{ if(localStorage.getItem("sowra_admin")==="1") return; }catch(e){}
   var de=document.documentElement;
   de.style.visibility="hidden";
   var shown=false, show=function(){ if(!shown){ shown=true; de.style.visibility=""; } };
@@ -70,7 +92,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@400;600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0"></script>
 <script src="leaflet.js?x=m1.0"></script>
-<link rel="stylesheet" href="style.css?x=m2.5">
+<link rel="stylesheet" href="style.css?x=m2.6">
 <link rel="stylesheet" href="leaflet.css?x=m1.0">
 </head>
 <body class="page-feed">
@@ -857,9 +879,9 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
-  <script type="module" src="js/main.js?x=m2.5"></script>
+  <script type="module" src="js/main.js?x=m2.6"></script>
 </body>
 </html>
-  <script type="module" src="js/main.js?x=m2.5"></script>
+  <script type="module" src="js/main.js?x=m2.6"></script>
 </body>
 </html>

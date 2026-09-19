@@ -343,6 +343,39 @@ try{
   }
 }catch(e){}
 
+/* ═══ مفتاح الستارة يلمسه غير حارسه ═══
+   sessionStorage.sowra_pass هو إذن صاحب الموقع بتجاوز ستارة الصيانة،
+   ومالكه الوحيد الحارسُ في index.html. وقد وقعنا في هذا مرّة: كان
+   المفتاح يُستودَع localStorage.sowra_admin — وهي خانةُ صفةِ الإشراف —
+   فصار checkAdmin يمحوه على كل زيارةٍ غير مسجَّلة، فتُقفل الستارة على
+   المالك داخل موقعه. فأي قراءةٍ أو كتابةٍ له من js/ تعيد العطل.
+
+   وتُفحَص معها العلّة الثانية: محوُ صفة الإشراف بناءً على جوابٍ لم
+   يصل. removeItem('sowra_admin') لا يجوز إلا بعد التحقّق من وصول
+   الجواب، فنشترط أن يُذكر في سطره حرزٌ (answered/isAnon). */
+let passKey = [], blindWipe = [];
+try{
+  for(const f of files){
+    const lines = read(f).split('\n');
+    lines.forEach((ln, i) => {
+      if(/sowra_pass/.test(ln)) passKey.push(`${f}:${i+1}`);
+      /* المحو جائزٌ على نفيٍ مؤكَّد: زائرٌ مجهول (isAnon)، أو خروجٌ
+         مقصود (signOut)، أو جوابٌ وصل (answered). والحرز يُقبل من
+         السطر نفسه أو من أربعة أسطرٍ قبله، لأن الشرط يسبق جسده. */
+      if(/removeItem\(\s*['"]sowra_admin['"]/.test(ln)){
+        const win = lines.slice(Math.max(0,i-4), i+1).join('\n');
+        if(!/answered|isAnon|signOut/.test(win)) blindWipe.push(`${f}:${i+1}`);
+      }
+    });
+  }
+  /* الحارس نفسه لا بدّ أن يملك المفتاح — وإلا فقد ضاع الإصلاح كلّه */
+  const h = fs.readFileSync('./index.html','utf8');
+  if(!/sessionStorage\.setItem\(\s*["']sowra_pass["']/.test(h))
+    passKey.push('index.html — الحارس لا يكتب sowra_pass');
+  if(!/sessionStorage\.getItem\(\s*["']sowra_pass["']\s*\)\s*===\s*["']1["']/.test(h))
+    passKey.push('index.html — الحارس لا يقرأ sowra_pass');
+}catch(e){}
+
 /* ═══ خطأ إعرابي — أول الفحوص وأهمّها ═══
    هذا الفاحص فحص ثمانية أشياء ذكية شهوراً ولم يفحص أبسطها: هل الملف
    جافاسكربت صحيح؟ فمرّت عليه تعليقةٌ أُغلقت مرتين، وقبلها دالةٌ
@@ -437,6 +470,12 @@ if(lightBg.length){ fails++; lightBg.forEach(s => console.log(`       ${s} — �
 
 line(!staleGets.length, 'قيمة متغيّرة من الحاجز', staleGets.length || '');
 if(staleGets.length){ fails++; staleGets.forEach(s => console.log(`       ${s} — صدّر دالة قارئة واستعمل need`)); }
+
+line(!passKey.length, 'مفتاح الستارة بحارسه', passKey.length || '');
+if(passKey.length){ fails++; passKey.forEach(s => console.log(`       ${s} — sowra_pass للحارس وحده`)); }
+
+line(!blindWipe.length, 'محوُ صفةٍ بلا جواب', blindWipe.length || '');
+if(blindWipe.length){ fails++; blindWipe.forEach(s => console.log(`       ${s} — لا تمحُ إلا على جوابٍ وصل (answered)`)); }
 
 console.log(`  ${big.length ? warn('⚠️') : ok('✅')} فوق ٤٠٠ سطر${' '.repeat(10)} ${big.length || ''}`);
 big.forEach(([f,n]) => console.log(`       ${f} — ${n}`));

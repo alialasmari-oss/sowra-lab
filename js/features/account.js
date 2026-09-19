@@ -37,16 +37,21 @@ export async function checkAdmin(){
       const g=$('admGear');if(g)g.style.display='none';
       return false;
     }
-    let data=null;
+    /* ═══ نفيٌ مؤكَّد لا نفيٌ مشكوك فيه ═══
+       كانت الأخطاء تُبتلَع هنا بـcatch فارغ، فيبقى data=null، فيصير
+       «تعذّر السؤال» و«ليس مشرفاً» شيئاً واحداً — ثم يُمحى مفتاح الجهاز
+       في الأسفل بناءً على ذلك. فوميضُ شبكةٍ واحد كان يكفي لتنزع صفة
+       الإشراف عن صاحب الموقع. فصار الجواب يُحمل معه: هل وصل أصلاً. */
+    let data=null, answered=false;
     try{
       const r=await sb.from('admins').select('id,role').eq('id',currentUser()?.id).maybeSingle();
-      data=r.data;
+      if(!r.error){ answered=true; data=r.data; }
     }catch(e){}
     // احتياطي: لو فشل عمود role
     if(!data){
       try{
         const r2=await sb.from('admins').select('id').eq('id',currentUser()?.id).maybeSingle();
-        data=r2.data;
+        if(!r2.error){ answered=true; data=r2.data; }
       }catch(e){}
     }
     state.isAdmin=!!data;
@@ -63,8 +68,15 @@ export async function checkAdmin(){
       const g=$('admGear');
       if(g)g.style.display='block';
     }
-    try{state.isAdmin?localStorage.setItem('sowra_admin','1'):localStorage.removeItem('sowra_admin')}catch(e){}
-    const g=$('admGear');if(g)g.style.display=state.isAdmin?'block':'none';
+    /* لا تمحُ إلا على جوابٍ وصل. وإن لم يصل فالصفة السابقة أصدق من
+       تخميننا: نتركها كما هي ولا نُسقطها. */
+    try{
+      if(state.isAdmin) localStorage.setItem('sowra_admin','1');
+      else if(answered) localStorage.removeItem('sowra_admin');
+    }catch(e){}
+    let held=false;
+    if(!answered){ try{ held=localStorage.getItem('sowra_admin')==='1' }catch(e){} }
+    const g=$('admGear');if(g)g.style.display=(state.isAdmin||held)?'block':'none';
     return state.isAdmin;
   }catch(e){state.isAdmin=false;return false}
 }
